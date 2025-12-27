@@ -1,0 +1,373 @@
+import React, { useState, useEffect } from 'react';
+import { Copy, Check, LogOut, RefreshCw, Share2, Send, X, Menu, ChevronDown, Key, Coins, Activity, Book, Shield, FileText } from 'lucide-react';
+
+export default function SadasLKPortal() {
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [showLogin, setShowLogin] = useState(true);
+  const [apiKey, setApiKey] = useState('sk_live_' + Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15));
+  const [balance, setBalance] = useState(0);
+  const [copied, setCopied] = useState(false);
+  const [showTransfer, setShowTransfer] = useState(false);
+  const [transferAmount, setTransferAmount] = useState('');
+  const [transferEmail, setTransferEmail] = useState('');
+  const [selectedEndpoint, setSelectedEndpoint] = useState(null);
+  const [showMenu, setShowMenu] = useState(false);
+  const [loginForm, setLoginForm] = useState({ email: '', password: '' });
+  const [signupForm, setSignupForm] = useState({ email: '', password: '', confirmPassword: '' });
+  const [showForgotPassword, setShowForgotPassword] = useState(false);
+
+  const endpoints = [
+    { category: 'AI & ML', apis: ['GPT Chat', 'Image Generation', 'Text to Speech', 'Speech to Text', 'Sentiment Analysis'] },
+    { category: 'Data', apis: ['Weather API', 'Currency Exchange', 'Stock Prices', 'News Feed', 'Crypto Prices'] },
+    { category: 'Utils', apis: ['QR Generator', 'URL Shortener', 'Email Validator', 'PDF Generator', 'Image Resize'] },
+    { category: 'Social', apis: ['Instagram Data', 'Twitter Scraper', 'YouTube Stats', 'TikTok Info', 'Facebook Graph'] }
+  ];
+
+  const packages = [
+    { name: 'Starter', coins: 500, price: '250 LKR', tag: null },
+    { name: 'Pro', coins: 2500, price: '1,000 LKR', tag: 'Best Value' },
+    { name: 'Ultimate', coins: 5000, price: '1,800 LKR', tag: null }
+  ];
+
+  const copyToClipboard = () => {
+    navigator.clipboard.writeText(apiKey);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  const regenerateKey = () => {
+    if (confirm('මෙය ඔබගේ වත්මන් API key එක අවලංගු කරයි. දිගටම යන්නද?')) {
+      setApiKey('sk_live_' + Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15));
+    }
+  };
+
+  const handleTransfer = () => {
+    if (transferAmount && transferEmail && parseInt(transferAmount) <= balance) {
+      setBalance(balance - parseInt(transferAmount));
+      setTransferAmount('');
+      setTransferEmail('');
+      setShowTransfer(false);
+      alert('Coins transferred successfully!');
+    }
+  };
+
+  const handleLogin = (e) => {
+    e.preventDefault();
+    setIsLoggedIn(true);
+    setBalance(100);
+  };
+
+  const handleSignup = (e) => {
+    e.preventDefault();
+    if (signupForm.password === signupForm.confirmPassword) {
+      setIsLoggedIn(true);
+      setBalance(160); // 100 base + 60 referral bonus
+    }
+  };
+
+  const buyPackage = (coins) => {
+    setBalance(balance + coins);
+    alert(`Successfully purchased ${coins} coins!`);
+  };
+
+  if (!isLoggedIn) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 text-white">
+        <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiMyMTIxMjEiIGZpbGwtb3BhY2l0eT0iMC4xIj48cGF0aCBkPSJNMzYgMzBoLTJWMGgydjMwem0wIDMwdi0yaDJWNjBoLTJ6TTAgMzZoMzB2Mkgwdi0yem0zMCAwaDMwdjJIMzB2LTJ6Ii8+PC9nPjwvZz48L3N2Zz4=')] opacity-20"></div>
+        
+        <nav className="relative z-10 border-b border-slate-800 bg-slate-950/50 backdrop-blur-xl">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-2">
+                <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center font-bold text-xl">S</div>
+                <span className="text-xl font-bold">SadasLK</span>
+              </div>
+            </div>
+          </div>
+        </nav>
+
+        <div className="relative z-10 flex items-center justify-center min-h-[calc(100vh-80px)] px-4 py-12">
+          <div className="w-full max-w-md">
+            {showForgotPassword ? (
+              <div className="bg-slate-900/80 backdrop-blur-xl rounded-2xl border border-slate-800 p-8 shadow-2xl">
+                <h2 className="text-2xl font-bold mb-6">Reset Password</h2>
+                <form className="space-y-4">
+                  <input type="email" placeholder="Email" className="w-full px-4 py-3 bg-slate-800/50 border border-slate-700 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none" />
+                  <button type="submit" className="w-full py-3 bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg font-semibold hover:shadow-lg hover:shadow-blue-500/50 transition-all">Send Reset Link</button>
+                  <button type="button" onClick={() => setShowForgotPassword(false)} className="w-full text-slate-400 hover:text-white transition-colors">Back to Login</button>
+                </form>
+              </div>
+            ) : showLogin ? (
+              <div className="bg-slate-900/80 backdrop-blur-xl rounded-2xl border border-slate-800 p-8 shadow-2xl">
+                <div className="text-center mb-8">
+                  <h2 className="text-3xl font-bold mb-2">Welcome Back</h2>
+                  <p className="text-slate-400">Sign in to access your developer dashboard</p>
+                  <div className="mt-4 inline-flex items-center space-x-2 bg-blue-500/10 border border-blue-500/30 text-blue-400 px-4 py-2 rounded-full text-sm">
+                    <span>Referral Bonus</span>
+                    <span className="font-bold">+60 Coins will be added!</span>
+                  </div>
+                </div>
+                <form onSubmit={handleLogin} className="space-y-4">
+                  <input type="email" placeholder="Email" value={loginForm.email} onChange={(e) => setLoginForm({...loginForm, email: e.target.value})} className="w-full px-4 py-3 bg-slate-800/50 border border-slate-700 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none" required />
+                  <input type="password" placeholder="Password" value={loginForm.password} onChange={(e) => setLoginForm({...loginForm, password: e.target.value})} className="w-full px-4 py-3 bg-slate-800/50 border border-slate-700 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none" required />
+                  <button type="submit" className="w-full py-3 bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg font-semibold hover:shadow-lg hover:shadow-blue-500/50 transition-all">Log In</button>
+                  <button type="button" onClick={() => setShowForgotPassword(true)} className="w-full text-blue-400 hover:text-blue-300 transition-colors text-sm">Forgot Password?</button>
+                </form>
+                <div className="mt-6 text-center text-slate-400">
+                  New here? <button onClick={() => setShowLogin(false)} className="text-blue-400 hover:text-blue-300 font-semibold">Create Account</button>
+                </div>
+              </div>
+            ) : (
+              <div className="bg-slate-900/80 backdrop-blur-xl rounded-2xl border border-slate-800 p-8 shadow-2xl">
+                <div className="text-center mb-8">
+                  <h2 className="text-3xl font-bold mb-2">Create Account</h2>
+                  <p className="text-slate-400">Join thousands of developers</p>
+                </div>
+                <form onSubmit={handleSignup} className="space-y-4">
+                  <input type="email" placeholder="Email" value={signupForm.email} onChange={(e) => setSignupForm({...signupForm, email: e.target.value})} className="w-full px-4 py-3 bg-slate-800/50 border border-slate-700 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none" required />
+                  <input type="password" placeholder="Password" value={signupForm.password} onChange={(e) => setSignupForm({...signupForm, password: e.target.value})} className="w-full px-4 py-3 bg-slate-800/50 border border-slate-700 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none" required />
+                  <input type="password" placeholder="Confirm Password" value={signupForm.confirmPassword} onChange={(e) => setSignupForm({...signupForm, confirmPassword: e.target.value})} className="w-full px-4 py-3 bg-slate-800/50 border border-slate-700 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none" required />
+                  <button type="submit" className="w-full py-3 bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg font-semibold hover:shadow-lg hover:shadow-blue-500/50 transition-all">Create Account</button>
+                </form>
+                <div className="mt-6 text-center text-slate-400">
+                  Already have an account? <button onClick={() => setShowLogin(true)} className="text-blue-400 hover:text-blue-300 font-semibold">Log In</button>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 text-white">
+      <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiMyMTIxMjEiIGZpbGwtb3BhY2l0eT0iMC4xIj48cGF0aCBkPSJNMzYgMzBoLTJWMGgydjMwem0wIDMwdi0yaDJWNjBoLTJ6TTAgMzZoMzB2Mkgwdi0yem0zMCAwaDMwdjJIMzB2LTJ6Ii8+PC9nPjwvZz48L3N2Zz4=')] opacity-20"></div>
+
+      <nav className="relative z-10 border-b border-slate-800 bg-slate-950/50 backdrop-blur-xl sticky top-0">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-2">
+              <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center font-bold text-xl">S</div>
+              <span className="text-xl font-bold">SadasLK</span>
+            </div>
+            
+            <div className="hidden md:flex items-center space-x-8">
+              <a href="#" className="text-slate-300 hover:text-white transition-colors font-medium">Dashboard</a>
+              <a href="#" className="text-slate-300 hover:text-white transition-colors font-medium">Overview</a>
+              <a href="#" className="text-slate-300 hover:text-white transition-colors font-medium">API Library</a>
+              <div className="flex items-center space-x-3 bg-slate-800/50 px-4 py-2 rounded-full border border-slate-700">
+                <Coins className="w-4 h-4 text-yellow-500" />
+                <span className="font-bold">{balance}</span>
+              </div>
+              <button onClick={() => setIsLoggedIn(false)} className="flex items-center space-x-2 text-red-400 hover:text-red-300 transition-colors">
+                <LogOut className="w-4 h-4" />
+                <span>Log Out</span>
+              </button>
+            </div>
+
+            <button onClick={() => setShowMenu(!showMenu)} className="md:hidden">
+              <Menu className="w-6 h-6" />
+            </button>
+          </div>
+
+          {showMenu && (
+            <div className="md:hidden mt-4 space-y-2 pb-4">
+              <a href="#" className="block px-4 py-2 hover:bg-slate-800 rounded-lg">Dashboard</a>
+              <a href="#" className="block px-4 py-2 hover:bg-slate-800 rounded-lg">Overview</a>
+              <a href="#" className="block px-4 py-2 hover:bg-slate-800 rounded-lg">API Library</a>
+              <div className="px-4 py-2 flex items-center space-x-2">
+                <Coins className="w-4 h-4 text-yellow-500" />
+                <span className="font-bold">Balance: {balance}</span>
+              </div>
+              <button onClick={() => setIsLoggedIn(false)} className="w-full text-left px-4 py-2 hover:bg-slate-800 rounded-lg text-red-400">Log Out</button>
+            </div>
+          )}
+        </div>
+      </nav>
+
+      <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="mb-8 flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold mb-2">Hello, Dev 👋</h1>
+            <p className="text-slate-400">Welcome. Please note that each successful API request will deduct <span className="text-yellow-500 font-bold">5 coins</span> from your balance.</p>
+          </div>
+          <div className="hidden md:flex items-center space-x-6 bg-slate-900/80 backdrop-blur-xl border border-slate-800 rounded-xl px-6 py-4">
+            <div className="text-center">
+              <div className="text-2xl font-bold text-yellow-500">5</div>
+              <div className="text-xs text-slate-400">Cost Per Request</div>
+            </div>
+            <div className="w-px h-12 bg-slate-700"></div>
+            <div className="text-center">
+              <div className="text-2xl font-bold">{balance}</div>
+              <div className="text-xs text-slate-400">Balance</div>
+            </div>
+          </div>
+        </div>
+
+        <div className="grid md:grid-cols-3 gap-6 mb-8">
+          <div className="md:col-span-2 bg-slate-900/80 backdrop-blur-xl rounded-2xl border border-slate-800 p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-bold flex items-center space-x-2">
+                <Key className="w-5 h-5" />
+                <span>API Credentials</span>
+              </h2>
+              <span className="text-green-400 text-sm bg-green-500/10 px-3 py-1 rounded-full border border-green-500/30">{copied ? 'Copied!' : 'Active'}</span>
+            </div>
+            <div className="bg-slate-950/50 rounded-lg p-4 mb-4 font-mono text-sm break-all border border-slate-800">
+              {apiKey}
+            </div>
+            <p className="text-slate-400 text-sm mb-4">Include in header: <code className="bg-slate-800 px-2 py-1 rounded text-blue-400">x-api-key</code></p>
+            <div className="flex space-x-3">
+              <button onClick={copyToClipboard} className="flex items-center space-x-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors">
+                {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+                <span>Copy</span>
+              </button>
+              <button onClick={regenerateKey} className="flex items-center space-x-2 px-4 py-2 bg-slate-800 hover:bg-slate-700 rounded-lg transition-colors border border-slate-700">
+                <RefreshCw className="w-4 h-4" />
+                <span>Regenerate</span>
+              </button>
+            </div>
+            <p className="text-slate-500 text-xs mt-3">⚠️ Regenerating will invalidate your current key immediately.</p>
+          </div>
+
+          <div className="bg-gradient-to-br from-blue-600 to-purple-600 rounded-2xl p-6 text-white">
+            <h3 className="text-xl font-bold mb-2 flex items-center space-x-2">
+              <Share2 className="w-5 h-5" />
+              <span>Earn Coins</span>
+            </h3>
+            <div className="text-3xl font-bold mb-2">+60 Bonus</div>
+            <p className="text-blue-100 text-sm mb-4">Share your link and earn rewards instantly.</p>
+            <button className="w-full py-2 bg-white text-blue-600 rounded-lg font-semibold hover:bg-blue-50 transition-colors flex items-center justify-center space-x-2">
+              <Share2 className="w-4 h-4" />
+              <span>Share</span>
+            </button>
+          </div>
+        </div>
+
+        <div className="bg-slate-900/80 backdrop-blur-xl rounded-2xl border border-slate-800 p-6 mb-8">
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-xl font-bold flex items-center space-x-2">
+              <Activity className="w-5 h-5" />
+              <span>Endpoints: All</span>
+            </h2>
+            <span className="text-yellow-500 text-sm bg-yellow-500/10 px-3 py-1 rounded-full border border-yellow-500/30">-5 COINS PER CALL</span>
+          </div>
+          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
+            {endpoints.map((category, idx) => (
+              <div key={idx} className="bg-slate-950/50 rounded-xl p-4 border border-slate-800">
+                <h3 className="font-bold mb-3 text-blue-400">{category.category}</h3>
+                <div className="space-y-2">
+                  {category.apis.map((api, i) => (
+                    <button key={i} onClick={() => setSelectedEndpoint(api)} className="w-full text-left px-3 py-2 bg-slate-800/50 hover:bg-slate-800 rounded-lg text-sm transition-colors border border-slate-700/50 hover:border-slate-600">
+                      {api}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {selectedEndpoint && (
+          <div className="bg-slate-900/80 backdrop-blur-xl rounded-2xl border border-slate-800 p-6 mb-8">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-xl font-bold">{selectedEndpoint}</h3>
+              <button onClick={() => setSelectedEndpoint(null)} className="text-slate-400 hover:text-white">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="bg-slate-950/50 rounded-lg p-4 border border-slate-800">
+              <div className="flex items-center space-x-3 mb-3">
+                <span className="bg-green-500 text-black px-2 py-1 rounded text-xs font-bold">GET</span>
+                <code className="text-blue-400 text-sm">/api/v1/{selectedEndpoint.toLowerCase().replace(' ', '-')}</code>
+              </div>
+              <div className="text-slate-400 text-sm">
+                <p className="mb-2"><strong>Headers:</strong></p>
+                <code className="block bg-slate-900 p-2 rounded text-xs">x-api-key: {apiKey.substring(0, 20)}...</code>
+                <p className="mt-3 mb-2"><strong>Response:</strong></p>
+                <code className="block bg-slate-900 p-2 rounded text-xs">{'{ "status": "success", "data": {...} }'}</code>
+              </div>
+            </div>
+          </div>
+        )}
+
+        <div className="bg-slate-900/80 backdrop-blur-xl rounded-2xl border border-slate-800 p-6 mb-8">
+          <h2 className="text-xl font-bold mb-6">Coin Packages</h2>
+          <p className="text-slate-400 mb-6">Secure & Instant Top-up</p>
+          <div className="grid md:grid-cols-3 gap-6">
+            {packages.map((pkg, idx) => (
+              <div key={idx} className={`relative bg-slate-950/50 rounded-xl p-6 border ${idx === 1 ? 'border-blue-500' : 'border-slate-800'} hover:border-blue-500/50 transition-all`}>
+                {pkg.tag && (
+                  <div className="absolute -top-3 left-1/2 transform -translate-x-1/2 bg-gradient-to-r from-blue-600 to-purple-600 text-white px-4 py-1 rounded-full text-xs font-bold">
+                    {pkg.tag}
+                  </div>
+                )}
+                <h3 className="text-lg font-bold mb-2">{pkg.name}</h3>
+                <div className="text-3xl font-bold mb-1">{pkg.coins.toLocaleString()}</div>
+                <div className="text-slate-400 text-sm mb-4">Coins</div>
+                <div className="text-2xl font-bold text-blue-400 mb-6">{pkg.price}</div>
+                <button onClick={() => buyPackage(pkg.coins)} className={`w-full py-3 rounded-lg font-semibold transition-all ${idx === 1 ? 'bg-gradient-to-r from-blue-600 to-purple-600 hover:shadow-lg hover:shadow-blue-500/50' : 'bg-slate-800 hover:bg-slate-700 border border-slate-700'}`}>
+                  {idx === 1 ? 'Buy Now' : 'Buy'}
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="bg-slate-900/80 backdrop-blur-xl rounded-2xl border border-slate-800 p-6">
+          <h2 className="text-xl font-bold mb-4 flex items-center space-x-2">
+            <Send className="w-5 h-5" />
+            <span>Send Coins to Friend</span>
+          </h2>
+          <p className="text-slate-400 mb-6">Transfer your coins to another developer's account instantly.</p>
+          {!showTransfer ? (
+            <button onClick={() => setShowTransfer(true)} className="px-6 py-3 bg-blue-600 hover:bg-blue-700 rounded-lg font-semibold transition-colors">
+              Transfer Coins
+            </button>
+          ) : (
+            <div className="space-y-4">
+              <input type="email" placeholder="Recipient Email" value={transferEmail} onChange={(e) => setTransferEmail(e.target.value)} className="w-full px-4 py-3 bg-slate-950/50 border border-slate-700 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none" />
+              <input type="number" placeholder="Amount" value={transferAmount} onChange={(e) => setTransferAmount(e.target.value)} className="w-full px-4 py-3 bg-slate-950/50 border border-slate-700 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none" />
+              <div className="flex space-x-3">
+                <button onClick={handleTransfer} className="px-6 py-3 bg-blue-600 hover:bg-blue-700 rounded-lg font-semibold transition-colors">Send</button>
+                <button onClick={() => setShowTransfer(false)} className="px-6 py-3 bg-slate-800 hover:bg-slate-700 rounded-lg font-semibold transition-colors border border-slate-700">Cancel</button>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+
+      <footer className="relative z-10 border-t border-slate-800 bg-slate-950/50 backdrop-blur-xl mt-16">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+          <div className="grid md:grid-cols-4 gap-8">
+            <div>
+              <div className="flex items-center space-x-2 mb-4">
+                <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center font-bold text-xl">S</div>
+                <span className="text-xl font-bold">SadasLK</span>
+              </div>
+              <p className="text-slate-400 text-sm">Empowering developers with robust, scalable, and easy-to-use APIs. Build the future with us.</p>
+            </div>
+            <div>
+              <h4 className="font-bold mb-4">Resources</h4>
+              <div className="space-y-2 text-slate-400">
+                <a href="#" className="block hover:text-white transition-colors">Documentation</a>
+                <a href="#" className="block hover:text-white transition-colors">Status</a>
+              </div>
+            </div>
+            <div>
+              <h4 className="font-bold mb-4">Legal</h4>
+              <div className="space-y-2 text-slate-400">
+                <a href="#" className="block hover:text-white transition-colors">Privacy</a>
+                <a href="#" className="block hover:text-white transition-colors">Terms</a>
+              </div>
+            </div>
+          </div>
+          <div className="mt-8 pt-8 border-t border-slate-800 text-center text-slate-400 text-sm">
+            © 2025 SadasLK APIs. All rights reserved.
+          </div>
+        </div>
+      </footer>
+    </div>
+  );
+}
