@@ -3,13 +3,13 @@
 // Firebase Console > Project Settings > General > Your apps > Config
 
 const firebaseConfig = {
-    apiKey: "YOUR_API_KEY_HERE",
-    authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
-    projectId: "YOUR_PROJECT_ID",
-    storageBucket: "YOUR_PROJECT_ID.appspot.com",
-    messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
-    appId: "YOUR_APP_ID",
-    measurementId: "YOUR_MEASUREMENT_ID"
+    apiKey: "AIzaSyBYGqBQmI4y3bPzRI5MOgBQUW5Wdu4rbFM",
+    authDomain: "kaliyax-api.firebaseapp.com",
+    projectId: "kaliyax-api",
+    storageBucket: "kaliyax-api.firebasestorage.app",
+    messagingSenderId: "500608402",
+    appId: "1:500608402:web:08f3052795fffc2879e54b",
+    measurementId: "G-3CM868DXM5"
 };
 
 // Initialize Firebase
