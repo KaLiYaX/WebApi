@@ -1,32 +1,33 @@
+// FILE: functions/index.js
+
 const functions = require('firebase-functions');
 const admin = require('firebase-admin');
 const nodemailer = require('nodemailer');
 
 admin.initializeApp();
 
-// Configure your email service
-// Use Gmail, SendGrid, or any SMTP service
-const transporter = nodemailer.createTransport({
+// ⚠️ IMPORTANT: මෙතැන ඔබේ email credentials දාන්න
+const transporter = nodemailer.createTransporter({
     service: 'gmail',
     auth: {
-        user: 'your-email@gmail.com', // Replace with your email
-        pass: 'your-app-password' // Use App Password for Gmail
+        user: 'your-email@gmail.com', // ඔබේ Gmail
+        pass: 'your-app-password' // Gmail App Password
     }
 });
 
-// Generate 4-digit verification code
+// 4-digit verification code එකක් generate කරන්න
 function generateVerificationCode() {
     return Math.floor(1000 + Math.random() * 9000).toString();
 }
 
-// Send verification email
+// Verification email එක send කරන්න
 exports.sendVerificationEmail = functions.https.onCall(async (data, context) => {
     const { email, type } = data; // type: 'signup', 'password_reset', 'email_change'
     
     try {
         const code = generateVerificationCode();
         
-        // Store verification code in Firestore (expires in 10 minutes)
+        // Firestore එකේ code එක save කරන්න (10 minutes expire)
         await admin.firestore().collection('verification_codes').doc(email).set({
             code: code,
             type: type,
@@ -34,7 +35,7 @@ exports.sendVerificationEmail = functions.https.onCall(async (data, context) => 
             expiresAt: admin.firestore.Timestamp.fromDate(new Date(Date.now() + 10 * 60 * 1000))
         });
         
-        // Email template based on type
+        // Email template type අනුව
         let subject, html;
         
         if (type === 'signup') {
@@ -146,12 +147,4 @@ exports.verifyCode = functions.https.onCall(async (data, context) => {
     } catch (error) {
         throw error;
     }
-});
-
-// WhatsApp redirect for support
-exports.getWhatsAppLink = functions.https.onCall(async (data, context) => {
-    const { message } = data;
-    const phoneNumber = '94771198299';
-    const encodedMessage = encodeURIComponent(message);
-    return { url: `https://wa.me/${phoneNumber}?text=${encodedMessage}` };
 });
