@@ -37,15 +37,6 @@
             font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New', monospace;
         }
 
-        .gradient-bg {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        }
-
-        .glass-effect {
-            background: rgba(15, 23, 42, 0.8);
-            backdrop-filter: blur(10px);
-        }
-
         @keyframes fadeIn {
             from { opacity: 0; transform: translateY(10px); }
             to { opacity: 1; transform: translateY(0); }
@@ -53,6 +44,22 @@
 
         .animate-fade-in {
             animation: fadeIn 0.3s ease-out;
+        }
+
+        /* Notification styles */
+        .notification-enter {
+            animation: slideInRight 0.3s ease-out;
+        }
+
+        @keyframes slideInRight {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
         }
     </style>
 </head>
@@ -62,13 +69,16 @@
     <!-- Firebase Config -->
     <script type="text/babel" src="./src/config/firebase.js"></script>
     
-    <!-- Components -->
+    <!-- Components (Load in order) -->
     <script type="text/babel" src="./src/Footer.jsx"></script>
+    <script type="text/babel" src="./src/NotificationBar.jsx"></script>
     <script type="text/babel" src="./src/TransactionsTab.jsx"></script>
     <script type="text/babel" src="./src/ApiLibraryTab.jsx"></script>
     <script type="text/babel" src="./src/OverviewTab.jsx"></script>
     <script type="text/babel" src="./src/Dashboard.jsx"></script>
     <script type="text/babel" src="./src/AuthPage.jsx"></script>
+    <script type="text/babel" src="./src/AdminPanel.jsx"></script>
+    <script type="text/babel" src="./src/AdminLogin.jsx"></script>
     <script type="text/babel" src="./src/App.jsx"></script>
 </body>
 </html>
