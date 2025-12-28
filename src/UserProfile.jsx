@@ -1,24 +1,22 @@
+// FILE: src/UserProfile.jsx
+
 function UserProfile({ user, userData, onClose, onUpdate }) {
     const [activeSection, setActiveSection] = useState('profile');
     const [name, setName] = useState(userData?.name || '');
     const [bio, setBio] = useState(userData?.bio || '');
     const [profilePicture, setProfilePicture] = useState(userData?.profilePicture || '');
-    const [currentPassword, setCurrentPassword] = useState('');
     const [newPassword, setNewPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
     const [newEmail, setNewEmail] = useState('');
     const [emailPassword, setEmailPassword] = useState('');
     const [deletePassword, setDeletePassword] = useState('');
-    const [verificationCode, setVerificationCode] = useState(['', '', '', '']);
     const [showVerification, setShowVerification] = useState(false);
     const [verificationType, setVerificationType] = useState('');
+    const [pendingData, setPendingData] = useState(null);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
     const [success, setSuccess] = useState('');
 
-    const inputRefs = [useRef(), useRef(), useRef(), useRef()];
-
-    // Generate profile picture from initials
     const generateProfilePicture = (name) => {
         const initials = name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
         const colors = ['#667eea', '#764ba2', '#f093fb', '#4facfe', '#43e97b', '#fa709a'];
@@ -75,10 +73,10 @@ function UserProfile({ user, userData, onClose, onUpdate }) {
         setError('');
 
         try {
-            // Send verification code
-            const sendEmailFunction = firebase.functions().httpsCallable('sendVerificationEmail');
+            const sendEmailFunction = window.firebaseFunctions.httpsCallable('sendVerificationEmail');
             await sendEmailFunction({ email: user.email, type: 'password_reset' });
             
+            setPendingData({ password: newPassword });
             setVerificationType('password');
             setShowVerification(true);
         } catch (err) {
@@ -98,14 +96,13 @@ function UserProfile({ user, userData, onClose, onUpdate }) {
         setError('');
 
         try {
-            // Verify current password
             const credential = firebase.auth.EmailAuthProvider.credential(user.email, emailPassword);
             await user.reauthenticateWithCredential(credential);
 
-            // Send verification code to new email
-            const sendEmailFunction = firebase.functions().httpsCallable('sendVerificationEmail');
+            const sendEmailFunction = window.firebaseFunctions.httpsCallable('sendVerificationEmail');
             await sendEmailFunction({ email: newEmail, type: 'email_change' });
             
+            setPendingData({ email: newEmail });
             setVerificationType('email');
             setShowVerification(true);
         } catch (err) {
@@ -119,42 +116,30 @@ function UserProfile({ user, userData, onClose, onUpdate }) {
         }
     };
 
-    const verifyAndComplete = async () => {
-        const code = verificationCode.join('');
-        if (code.length !== 4) return;
-
+    const handleVerified = async () => {
         setLoading(true);
         setError('');
 
         try {
-            const verifyFunction = firebase.functions().httpsCallable('verifyCode');
-            const targetEmail = verificationType === 'email' ? newEmail : user.email;
-            const result = await verifyFunction({ email: targetEmail, code });
-
-            if (result.data.verified) {
-                if (verificationType === 'password') {
-                    // Update password
-                    await user.updatePassword(newPassword);
-                    setSuccess('Password changed successfully! ✅');
-                    setCurrentPassword('');
-                    setNewPassword('');
-                    setConfirmPassword('');
-                } else if (verificationType === 'email') {
-                    // Update email
-                    await user.updateEmail(newEmail);
-                    await window.firebaseDB.collection('users').doc(user.uid).update({
-                        email: newEmail
-                    });
-                    setSuccess('Email changed successfully! ✅');
-                    setNewEmail('');
-                    setEmailPassword('');
-                }
-                
-                setShowVerification(false);
-                setVerificationCode(['', '', '', '']);
+            if (verificationType === 'password') {
+                await user.updatePassword(pendingData.password);
+                setSuccess('Password changed successfully! ✅');
+                setNewPassword('');
+                setConfirmPassword('');
+            } else if (verificationType === 'email') {
+                await user.updateEmail(pendingData.email);
+                await window.firebaseDB.collection('users').doc(user.uid).update({
+                    email: pendingData.email
+                });
+                setSuccess('Email changed successfully! ✅');
+                setNewEmail('');
+                setEmailPassword('');
             }
+            
+            setShowVerification(false);
+            setPendingData(null);
         } catch (err) {
-            setError('Verification failed. Please try again.');
+            setError('Failed to complete action');
         } finally {
             setLoading(false);
         }
@@ -172,14 +157,10 @@ function UserProfile({ user, userData, onClose, onUpdate }) {
         setError('');
 
         try {
-            // Reauthenticate
             const credential = firebase.auth.EmailAuthProvider.credential(user.email, deletePassword);
             await user.reauthenticateWithCredential(credential);
 
-            // Delete Firestore data
             await window.firebaseDB.collection('users').doc(user.uid).delete();
-
-            // Delete Firebase Auth account
             await user.delete();
 
             alert('Account deleted successfully');
@@ -194,69 +175,23 @@ function UserProfile({ user, userData, onClose, onUpdate }) {
         }
     };
 
-    const handleVerificationInput = (index, value) => {
-        if (value.length > 1) value = value[0];
-        
-        const newCode = [...verificationCode];
-        newCode[index] = value;
-        setVerificationCode(newCode);
-
-        if (value && index < 3) {
-            inputRefs[index + 1].current?.focus();
-        }
-
-        if (index === 3 && value) {
-            verifyAndComplete();
-        }
-    };
-
     if (showVerification) {
         return (
-            <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-                <div className="bg-slate-900 rounded-2xl border border-slate-800 p-8 max-w-md w-full">
-                    <h2 className="text-2xl font-bold mb-4 text-center">Enter Verification Code</h2>
-                    <p className="text-slate-400 text-sm text-center mb-6">
-                        Code sent to {verificationType === 'email' ? newEmail : user.email}
-                    </p>
-
-                    {error && (
-                        <div className="mb-4 p-3 bg-red-500/10 border border-red-500/30 rounded-lg text-red-400 text-sm">
-                            {error}
-                        </div>
-                    )}
-
-                    <div className="flex justify-center space-x-3 mb-6">
-                        {verificationCode.map((digit, index) => (
-                            <input
-                                key={index}
-                                ref={inputRefs[index]}
-                                type="text"
-                                maxLength="1"
-                                value={digit}
-                                onChange={(e) => handleVerificationInput(index, e.target.value)}
-                                className="w-14 h-14 text-center text-2xl font-bold bg-slate-800/50 border-2 border-slate-700 rounded-lg focus:border-purple-500 outline-none"
-                            />
-                        ))}
-                    </div>
-
-                    <button
-                        onClick={() => {
-                            setShowVerification(false);
-                            setVerificationCode(['', '', '', '']);
-                        }}
-                        className="w-full py-3 bg-slate-800 hover:bg-slate-700 rounded-lg"
-                    >
-                        Cancel
-                    </button>
-                </div>
-            </div>
+            <EmailVerification
+                email={verificationType === 'email' ? pendingData.email : user.email}
+                onVerified={handleVerified}
+                type={verificationType === 'email' ? 'email_change' : 'password_reset'}
+                onBack={() => {
+                    setShowVerification(false);
+                    setPendingData(null);
+                }}
+            />
         );
     }
 
     return (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50 overflow-y-auto">
             <div className="bg-slate-900 rounded-2xl border border-slate-800 w-full max-w-4xl max-h-[90vh] overflow-y-auto">
-                {/* Header */}
                 <div className="sticky top-0 bg-slate-900 border-b border-slate-800 p-6 flex items-center justify-between">
                     <h2 className="text-2xl font-bold">User Profile</h2>
                     <button onClick={onClose} className="text-slate-400 hover:text-white">
@@ -266,14 +201,13 @@ function UserProfile({ user, userData, onClose, onUpdate }) {
                     </button>
                 </div>
 
-                {/* Tabs */}
                 <div className="border-b border-slate-800 px-6">
                     <div className="flex space-x-4 overflow-x-auto">
                         {['profile', 'security', 'delete'].map(tab => (
                             <button
                                 key={tab}
                                 onClick={() => setActiveSection(tab)}
-                                className={`px-4 py-3 font-semibold border-b-2 transition-colors ${
+                                className={`px-4 py-3 font-semibold border-b-2 transition-colors whitespace-nowrap ${
                                     activeSection === tab
                                         ? 'border-purple-500 text-purple-400'
                                         : 'border-transparent text-slate-400 hover:text-white'
@@ -287,7 +221,6 @@ function UserProfile({ user, userData, onClose, onUpdate }) {
                     </div>
                 </div>
 
-                {/* Content */}
                 <div className="p-6">
                     {error && (
                         <div className="mb-4 p-3 bg-red-500/10 border border-red-500/30 rounded-lg text-red-400 text-sm">
@@ -301,7 +234,6 @@ function UserProfile({ user, userData, onClose, onUpdate }) {
                         </div>
                     )}
 
-                    {/* Profile Section */}
                     {activeSection === 'profile' && (
                         <div className="space-y-6">
                             <div className="flex flex-col items-center">
@@ -349,10 +281,8 @@ function UserProfile({ user, userData, onClose, onUpdate }) {
                         </div>
                     )}
 
-                    {/* Security Section */}
                     {activeSection === 'security' && (
                         <div className="space-y-8">
-                            {/* Change Password */}
                             <div className="bg-slate-800/30 rounded-xl p-6 border border-slate-700">
                                 <h3 className="text-xl font-bold mb-4">🔐 Change Password</h3>
                                 <div className="space-y-4">
@@ -380,7 +310,6 @@ function UserProfile({ user, userData, onClose, onUpdate }) {
                                 </div>
                             </div>
 
-                            {/* Change Email */}
                             <div className="bg-slate-800/30 rounded-xl p-6 border border-slate-700">
                                 <h3 className="text-xl font-bold mb-4">📧 Change Email</h3>
                                 <div className="space-y-4">
@@ -413,7 +342,6 @@ function UserProfile({ user, userData, onClose, onUpdate }) {
                         </div>
                     )}
 
-                    {/* Delete Account Section */}
                     {activeSection === 'delete' && (
                         <div className="bg-red-500/10 rounded-xl p-6 border border-red-500/30">
                             <h3 className="text-xl font-bold text-red-400 mb-4">⚠️ Delete Account</h3>
