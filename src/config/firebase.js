@@ -1,7 +1,4 @@
 // Firebase Configuration
-// මෙහි ඔබේ Firebase project credentials තිබිය යුතුයි
-// Firebase Console > Project Settings > General > Your apps > Config
-
 const firebaseConfig = {
     apiKey: "AIzaSyBYGqBQmI4y3bPzRI5MOgBQUW5Wdu4rbFM",
     authDomain: "kaliyax-api.firebaseapp.com",
@@ -18,9 +15,11 @@ firebase.initializeApp(firebaseConfig);
 // Initialize Firebase services
 const auth = firebase.auth();
 const db = firebase.firestore();
+const functions = firebase.functions();
 
 // Export services globally
 window.firebaseAuth = auth;
 window.firebaseDB = db;
+window.firebaseFunctions = functions;
 
 console.log('✅ Firebase initialized successfully!');
