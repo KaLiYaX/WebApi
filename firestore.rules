@@ -2,49 +2,40 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     
-    // Users collection rules
+    // Users collection
     match /users/{userId} {
-      // User can read and write their own data
       allow read, write: if request.auth != null && request.auth.uid == userId;
-      
-      // Allow other authenticated users to read basic user info for transfers
       allow get: if request.auth != null;
-      
-      // Allow querying users by email for transfers
       allow list: if request.auth != null;
       
       // Transactions subcollection
       match /transactions/{transactionId} {
-        // User can only access their own transactions
         allow read, create: if request.auth != null && request.auth.uid == userId;
-        
-        // Prevent modifying existing transactions
         allow update, delete: if false;
       }
       
       // Notifications subcollection
       match /notifications/{notificationId} {
-        // User can read, update (mark as read/claimed) and delete their own notifications
         allow read, update, delete: if request.auth != null && request.auth.uid == userId;
-        
-        // Only system can create notifications
         allow create: if request.auth != null;
       }
     }
     
-    // API calls logging (optional)
+    // API calls logging
     match /api_calls/{callId} {
       allow create: if request.auth != null;
       allow read: if request.auth != null && resource.data.userId == request.auth.uid;
     }
     
-    // System settings (API cost, etc.)
+    // System settings
     match /settings/{document} {
-      // Everyone can read settings
       allow read: if request.auth != null;
-      
-      // Only authenticated users can write (Admin will use Firebase Admin SDK)
       allow write: if request.auth != null;
+    }
+    
+    // Verification codes
+    match /verification_codes/{email} {
+      allow read, write: if request.auth != null;
     }
   }
 }
