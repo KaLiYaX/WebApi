@@ -480,7 +480,7 @@ function AdminPanel({ onLogout }) {
                 </div>
             </div>
 
-            </div>
+            
 {/* Settings Modal */}
 {showSettings && (
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50" onClick={() => setShowSettings(false)}>
@@ -798,6 +798,7 @@ function AdminPanel({ onLogout }) {
         </div>
     </div>
 )}
+            </div>
         
     );
 }
