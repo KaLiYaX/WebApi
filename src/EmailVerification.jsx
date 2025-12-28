@@ -1,4 +1,4 @@
-function EmailVerification({ email, onVerified, onBack }) {
+function EmailVerification({ email, onVerified, onBack, type = 'signup' }) {
     const [code, setCode] = useState(['', '', '', '']);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
@@ -10,20 +10,17 @@ function EmailVerification({ email, onVerified, onBack }) {
     }, []);
 
     const handleChange = (index, value) => {
-        if (value.length > 1) {
-            value = value[0];
-        }
+        if (!/^\d*$/.test(value)) return; // Only numbers
+        if (value.length > 1) value = value[0];
 
         const newCode = [...code];
         newCode[index] = value;
         setCode(newCode);
 
-        // Auto focus next input
         if (value && index < 3) {
             inputRefs[index + 1].current?.focus();
         }
 
-        // Auto submit when all filled
         if (index === 3 && value) {
             const fullCode = newCode.join('');
             if (fullCode.length === 4) {
@@ -40,7 +37,7 @@ function EmailVerification({ email, onVerified, onBack }) {
 
     const handlePaste = (e) => {
         e.preventDefault();
-        const pastedData = e.clipboardData.getData('text').slice(0, 4);
+        const pastedData = e.clipboardData.getData('text').replace(/\D/g, '').slice(0, 4);
         const newCode = pastedData.split('');
         
         while (newCode.length < 4) {
@@ -59,24 +56,27 @@ function EmailVerification({ email, onVerified, onBack }) {
         setError('');
 
         try {
-            // Call Firebase function to verify code
-            const verifyFunction = firebase.functions().httpsCallable('verifyCode');
+            const verifyFunction = window.firebaseFunctions.httpsCallable('verifyCode');
             const result = await verifyFunction({ email, code: fullCode });
 
             if (result.data.verified) {
                 onVerified();
             } else {
                 setError('Invalid verification code');
+                setCode(['', '', '', '']);
+                inputRefs[0].current?.focus();
             }
         } catch (err) {
             console.error('Verification error:', err);
             if (err.code === 'deadline-exceeded') {
-                setError('Verification code expired. Please request a new one.');
+                setError('Code expired. Please request a new one.');
             } else if (err.code === 'invalid-argument') {
                 setError('Invalid verification code');
             } else {
                 setError('Verification failed. Please try again.');
             }
+            setCode(['', '', '', '']);
+            inputRefs[0].current?.focus();
         } finally {
             setLoading(false);
         }
@@ -87,9 +87,9 @@ function EmailVerification({ email, onVerified, onBack }) {
         setError('');
 
         try {
-            const sendEmailFunction = firebase.functions().httpsCallable('sendVerificationEmail');
-            await sendEmailFunction({ email, type: 'signup' });
-            alert('Verification code sent! Check your email.');
+            const sendEmailFunction = window.firebaseFunctions.httpsCallable('sendVerificationEmail');
+            await sendEmailFunction({ email, type });
+            alert('✅ New verification code sent!');
         } catch (err) {
             setError('Failed to resend code. Please try again.');
         } finally {
@@ -117,7 +117,7 @@ function EmailVerification({ email, onVerified, onBack }) {
                     </div>
 
                     {error && (
-                        <div className="mb-6 p-3 bg-red-500/10 border border-red-500/30 rounded-lg text-red-400 text-sm text-center">
+                        <div className="mb-6 p-3 bg-red-500/10 border border-red-500/30 rounded-lg text-red-400 text-sm text-center animate-fade-in">
                             {error}
                         </div>
                     )}
@@ -129,6 +129,7 @@ function EmailVerification({ email, onVerified, onBack }) {
                                     key={index}
                                     ref={inputRefs[index]}
                                     type="text"
+                                    inputMode="numeric"
                                     maxLength="1"
                                     value={digit}
                                     onChange={(e) => handleChange(index, e.target.value)}
@@ -152,7 +153,7 @@ function EmailVerification({ email, onVerified, onBack }) {
                         <button
                             onClick={resendCode}
                             disabled={resending || loading}
-                            className="text-purple-400 hover:text-purple-300 text-sm disabled:opacity-50"
+                            className="text-purple-400 hover:text-purple-300 text-sm disabled:opacity-50 transition-colors"
                         >
                             {resending ? 'Sending...' : "Didn't receive code? Resend"}
                         </button>
@@ -162,7 +163,7 @@ function EmailVerification({ email, onVerified, onBack }) {
                             className="block w-full py-3 bg-slate-800 hover:bg-slate-700 rounded-lg transition-colors"
                             disabled={loading}
                         >
-                            Back to Login
+                            Back
                         </button>
                     </div>
 
