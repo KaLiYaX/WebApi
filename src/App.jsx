@@ -1,21 +1,12 @@
+// FILE: src/App.jsx
+
 const { useState, useEffect } = React;
 
 function App() {
     const [user, setUser] = useState(null);
     const [loading, setLoading] = useState(true);
-    const [isAdminRoute, setIsAdminRoute] = useState(false);
-    const [isAdminLoggedIn, setIsAdminLoggedIn] = useState(false);
 
     useEffect(() => {
-        // Check if admin route
-        const path = window.location.pathname;
-        if (path === '/admin' || path === '/admin/') {
-            setIsAdminRoute(true);
-            setLoading(false);
-            return;
-        }
-
-        // Check authentication state for regular users
         const unsubscribe = window.firebaseAuth.onAuthStateChanged((currentUser) => {
             setUser(currentUser);
             setLoading(false);
@@ -23,15 +14,6 @@ function App() {
 
         return () => unsubscribe();
     }, []);
-
-    const handleAdminLogin = () => {
-        setIsAdminLoggedIn(true);
-    };
-
-    const handleAdminLogout = () => {
-        setIsAdminLoggedIn(false);
-        window.location.href = '/';
-    };
 
     if (loading) {
         return (
@@ -44,16 +26,6 @@ function App() {
         );
     }
 
-    // Admin Route
-    if (isAdminRoute) {
-        return isAdminLoggedIn ? (
-            <AdminPanel onLogout={handleAdminLogout} />
-        ) : (
-            <AdminLogin onLogin={handleAdminLogin} />
-        );
-    }
-
-    // User Route
     return (
         <div>
             {user ? <Dashboard user={user} /> : <AuthPage />}
