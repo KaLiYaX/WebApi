@@ -5,7 +5,9 @@ function AuthPage() {
     const [confirmPassword, setConfirmPassword] = useState('');
     const [name, setName] = useState('');
     const [error, setError] = useState('');
+    const [success, setSuccess] = useState('');
     const [loading, setLoading] = useState(false);
+    const [emailSent, setEmailSent] = useState(false);
 
     const handleLogin = async (e) => {
         e.preventDefault();
@@ -13,7 +15,26 @@ function AuthPage() {
         setLoading(true);
 
         try {
-            await window.firebaseAuth.signInWithEmailAndPassword(email, password);
+            const userCredential = await window.firebaseAuth.signInWithEmailAndPassword(email, password);
+            const user = userCredential.user;
+
+            // Check if email is verified
+            if (!user.emailVerified) {
+                await window.firebaseAuth.signOut();
+                setError('Please verify your email before logging in. Check your inbox.');
+                setLoading(false);
+                return;
+            }
+
+            // Check if user is suspended
+            const userDoc = await window.firebaseDB.collection('users').doc(user.uid).get();
+            if (userDoc.exists && userDoc.data().status === 'suspended') {
+                await window.firebaseAuth.signOut();
+                setError('Your account has been suspended. Please contact admin.');
+                setLoading(false);
+                return;
+            }
+
         } catch (err) {
             setError(err.message);
         } finally {
@@ -24,6 +45,7 @@ function AuthPage() {
     const handleSignup = async (e) => {
         e.preventDefault();
         setError('');
+        setSuccess('');
 
         if (password !== confirmPassword) {
             setError('Passwords do not match!');
@@ -41,8 +63,12 @@ function AuthPage() {
             const userCredential = await window.firebaseAuth.createUserWithEmailAndPassword(email, password);
             const user = userCredential.user;
 
+            // Send email verification
+            await user.sendEmailVerification();
+
             const apiKey = 'kx_live_' + Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
 
+            // Create user document
             await window.firebaseDB.collection('users').doc(user.uid).set({
                 name: name || email.split('@')[0],
                 email: email,
@@ -50,9 +76,11 @@ function AuthPage() {
                 balance: 160,
                 createdAt: firebase.firestore.FieldValue.serverTimestamp(),
                 totalCalls: 0,
-                status: 'active'
+                status: 'active',
+                emailVerified: false
             });
 
+            // Add welcome transaction
             await window.firebaseDB.collection('users').doc(user.uid).collection('transactions').add({
                 type: 'signup_bonus',
                 amount: 160,
@@ -60,6 +88,47 @@ function AuthPage() {
                 timestamp: firebase.firestore.FieldValue.serverTimestamp()
             });
 
+            // Add welcome notification
+            await window.firebaseDB.collection('users').doc(user.uid).collection('notifications').add({
+                type: 'announcement',
+                title: 'Welcome to KaliyaX API! 🎉',
+                message: 'Your account has been created successfully. You received 160 coins as welcome bonus!',
+                read: false,
+                timestamp: firebase.firestore.FieldValue.serverTimestamp()
+            });
+
+            // Sign out user after signup
+            await window.firebaseAuth.signOut();
+
+            setSuccess('Account created! Please check your email to verify your account before logging in.');
+            setEmailSent(true);
+            setEmail('');
+            setPassword('');
+            setConfirmPassword('');
+            setName('');
+
+        } catch (err) {
+            setError(err.message);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const resendVerification = async () => {
+        setError('');
+        setLoading(true);
+
+        try {
+            const methods = await window.firebaseAuth.fetchSignInMethodsForEmail(email);
+            if (methods.length > 0) {
+                // Sign in temporarily to resend verification
+                const userCredential = await window.firebaseAuth.signInWithEmailAndPassword(email, password);
+                await userCredential.user.sendEmailVerification();
+                await window.firebaseAuth.signOut();
+                setSuccess('Verification email sent! Please check your inbox.');
+            } else {
+                setError('Email not found!');
+            }
         } catch (err) {
             setError(err.message);
         } finally {
@@ -78,6 +147,9 @@ function AuthPage() {
                             <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-pink-600 rounded-lg flex items-center justify-center font-bold text-xl">K</div>
                             <span className="text-xl font-bold">KaliyaX API</span>
                         </div>
+                        <a href="/admin" className="text-slate-400 hover:text-white text-sm transition-colors">
+                            Admin Login →
+                        </a>
                     </div>
                 </div>
             </nav>
@@ -103,6 +175,25 @@ function AuthPage() {
                         {error && (
                             <div className="mb-4 p-3 bg-red-500/10 border border-red-500/30 rounded-lg text-red-400 text-sm">
                                 {error}
+                            </div>
+                        )}
+
+                        {success && (
+                            <div className="mb-4 p-3 bg-green-500/10 border border-green-500/30 rounded-lg text-green-400 text-sm">
+                                {success}
+                            </div>
+                        )}
+
+                        {emailSent && (
+                            <div className="mb-4 p-4 bg-blue-500/10 border border-blue-500/30 rounded-lg">
+                                <p className="text-blue-400 text-sm mb-2">📧 Verification email sent!</p>
+                                <p className="text-slate-400 text-xs">Please check your inbox and verify your email before logging in.</p>
+                                <button 
+                                    onClick={resendVerification}
+                                    className="mt-2 text-xs text-blue-400 hover:text-blue-300"
+                                >
+                                    Didn't receive? Resend email
+                                </button>
                             </div>
                         )}
 
