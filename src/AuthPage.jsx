@@ -4,10 +4,34 @@ function AuthPage() {
     const [password, setPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
     const [name, setName] = useState('');
+    const [referralCode, setReferralCode] = useState('');
     const [error, setError] = useState('');
-    const [success, setSuccess] = useState('');
     const [loading, setLoading] = useState(false);
-    const [emailSent, setEmailSent] = useState(false);
+    const [showEmailVerification, setShowEmailVerification] = useState(false);
+    const [pendingUser, setPendingUser] = useState(null);
+
+    useEffect(() => {
+        // Check for referral code in URL
+        const urlParams = new URLSearchParams(window.location.search);
+        const ref = urlParams.get('ref');
+        if (ref) {
+            setReferralCode(ref);
+        }
+    }, []);
+
+    const generateProfilePicture = (userName) => {
+        const initials = userName.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
+        const colors = ['#667eea', '#764ba2', '#f093fb', '#4facfe', '#43e97b', '#fa709a'];
+        const color = colors[Math.floor(Math.random() * colors.length)];
+        
+        return `data:image/svg+xml,${encodeURIComponent(`
+            <svg width="200" height="200" xmlns="http://www.w3.org/2000/svg">
+                <rect width="200" height="200" fill="${color}"/>
+                <text x="50%" y="50%" font-size="80" font-family="Arial" font-weight="bold" 
+                      fill="white" text-anchor="middle" dy=".35em">${initials}</text>
+            </svg>
+        `)}`;
+    };
 
     const handleLogin = async (e) => {
         e.preventDefault();
@@ -18,25 +42,23 @@ function AuthPage() {
             const userCredential = await window.firebaseAuth.signInWithEmailAndPassword(email, password);
             const user = userCredential.user;
 
-            // Check if email is verified
-            if (!user.emailVerified) {
-                await window.firebaseAuth.signOut();
-                setError('Please verify your email before logging in. Check your inbox.');
-                setLoading(false);
-                return;
-            }
-
             // Check if user is suspended
             const userDoc = await window.firebaseDB.collection('users').doc(user.uid).get();
             if (userDoc.exists && userDoc.data().status === 'suspended') {
                 await window.firebaseAuth.signOut();
-                setError('Your account has been suspended. Please contact admin.');
+                setError('Your account has been suspended. Contact support.');
                 setLoading(false);
                 return;
             }
 
         } catch (err) {
-            setError(err.message);
+            if (err.code === 'auth/user-not-found') {
+                setError('No account found with this email');
+            } else if (err.code === 'auth/wrong-password') {
+                setError('Incorrect password');
+            } else {
+                setError(err.message);
+            }
         } finally {
             setLoading(false);
         }
@@ -45,7 +67,6 @@ function AuthPage() {
     const handleSignup = async (e) => {
         e.preventDefault();
         setError('');
-        setSuccess('');
 
         if (password !== confirmPassword) {
             setError('Passwords do not match!');
@@ -60,31 +81,124 @@ function AuthPage() {
         setLoading(true);
 
         try {
-            const userCredential = await window.firebaseAuth.createUserWithEmailAndPassword(email, password);
+            // Get settings for bonuses
+            const welcomeDoc = await window.firebaseDB.collection('settings').doc('welcome_bonus').get();
+            const welcomeBonus = welcomeDoc.exists ? welcomeDoc.data().bonus : 100;
+
+            // Send verification email
+            const sendEmailFunction = firebase.functions().httpsCallable('sendVerificationEmail');
+            await sendEmailFunction({ email, type: 'signup' });
+
+            // Store pending user data
+            setPendingUser({
+                email,
+                password,
+                name: name || email.split('@')[0],
+                welcomeBonus,
+                referralCode
+            });
+
+            setShowEmailVerification(true);
+
+        } catch (err) {
+            if (err.code === 'auth/email-already-in-use') {
+                setError('Email already in use');
+            } else {
+                setError(err.message);
+            }
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleEmailVerified = async () => {
+        setLoading(true);
+
+        try {
+            // Create user account
+            const userCredential = await window.firebaseAuth.createUserWithEmailAndPassword(
+                pendingUser.email, 
+                pendingUser.password
+            );
             const user = userCredential.user;
 
-            // Send email verification
-            await user.sendEmailVerification();
+            const apiKey = 'kx_live_' + Math.random().toString(36).substring(2, 15) + 
+                          Math.random().toString(36).substring(2, 15);
 
-            const apiKey = 'kx_live_' + Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+            const profilePicture = generateProfilePicture(pendingUser.name);
+
+            let totalBonus = pendingUser.welcomeBonus;
+            let referrerId = null;
+
+            // Handle referral bonus
+            if (pendingUser.referralCode) {
+                const referrerQuery = await window.firebaseDB.collection('users')
+                    .where('referralCode', '==', pendingUser.referralCode)
+                    .limit(1)
+                    .get();
+
+                if (!referrerQuery.empty) {
+                    referrerId = referrerQuery.docs[0].id;
+                    
+                    // Get referral bonus from settings
+                    const referralDoc = await window.firebaseDB.collection('settings').doc('referral_bonus').get();
+                    const referralBonus = referralDoc.exists ? referralDoc.data().bonus : 40;
+
+                    totalBonus += referralBonus;
+
+                    // Add bonus to referrer
+                    await window.firebaseDB.collection('users').doc(referrerId).update({
+                        balance: firebase.firestore.FieldValue.increment(referralBonus)
+                    });
+
+                    // Add transaction for referrer
+                    await window.firebaseDB.collection('users').doc(referrerId).collection('transactions').add({
+                        type: 'referral',
+                        amount: referralBonus,
+                        from: pendingUser.email,
+                        timestamp: firebase.firestore.FieldValue.serverTimestamp()
+                    });
+
+                    // Notify referrer
+                    await window.firebaseDB.collection('users').doc(referrerId).collection('notifications').add({
+                        type: 'coin_reward',
+                        title: 'Referral Bonus! 🎉',
+                        message: `You earned ${referralBonus} coins for referring ${pendingUser.email}`,
+                        amount: referralBonus,
+                        claimed: true,
+                        read: false,
+                        timestamp: firebase.firestore.FieldValue.serverTimestamp()
+                    });
+                }
+            }
+
+            // Generate unique referral code
+            const userReferralCode = user.uid.substring(0, 8).toUpperCase();
 
             // Create user document
             await window.firebaseDB.collection('users').doc(user.uid).set({
-                name: name || email.split('@')[0],
-                email: email,
+                name: pendingUser.name,
+                email: pendingUser.email,
                 apiKey: apiKey,
-                balance: 160,
+                balance: totalBonus,
+                profilePicture: profilePicture,
+                bio: '',
+                referralCode: userReferralCode,
+                referredBy: referrerId,
+                apiKeyPaused: false,
                 createdAt: firebase.firestore.FieldValue.serverTimestamp(),
                 totalCalls: 0,
                 status: 'active',
-                emailVerified: false
+                emailVerified: true
             });
 
-            // Add welcome transaction
+            // Add signup transaction
             await window.firebaseDB.collection('users').doc(user.uid).collection('transactions').add({
                 type: 'signup_bonus',
-                amount: 160,
-                description: 'Welcome bonus + Referral bonus',
+                amount: totalBonus,
+                description: referrerId 
+                    ? `Welcome bonus + Referral bonus` 
+                    : 'Welcome bonus',
                 timestamp: firebase.firestore.FieldValue.serverTimestamp()
             });
 
@@ -92,21 +206,13 @@ function AuthPage() {
             await window.firebaseDB.collection('users').doc(user.uid).collection('notifications').add({
                 type: 'announcement',
                 title: 'Welcome to KaliyaX API! 🎉',
-                message: 'Your account has been created successfully. You received 160 coins as welcome bonus!',
+                message: `Your account has been created successfully. You received ${totalBonus} coins as bonus!`,
                 read: false,
                 timestamp: firebase.firestore.FieldValue.serverTimestamp()
             });
 
-            // Sign out user after signup
-            await window.firebaseAuth.signOut();
-
-            setSuccess('Account created! Please check your email to verify your account before logging in.');
-            setEmailSent(true);
-            setEmail('');
-            setPassword('');
-            setConfirmPassword('');
-            setName('');
-
+            // User will be automatically logged in
+            
         } catch (err) {
             setError(err.message);
         } finally {
@@ -114,27 +220,18 @@ function AuthPage() {
         }
     };
 
-    const resendVerification = async () => {
-        setError('');
-        setLoading(true);
-
-        try {
-            const methods = await window.firebaseAuth.fetchSignInMethodsForEmail(email);
-            if (methods.length > 0) {
-                // Sign in temporarily to resend verification
-                const userCredential = await window.firebaseAuth.signInWithEmailAndPassword(email, password);
-                await userCredential.user.sendEmailVerification();
-                await window.firebaseAuth.signOut();
-                setSuccess('Verification email sent! Please check your inbox.');
-            } else {
-                setError('Email not found!');
-            }
-        } catch (err) {
-            setError(err.message);
-        } finally {
-            setLoading(false);
-        }
-    };
+    if (showEmailVerification) {
+        return (
+            <EmailVerification
+                email={pendingUser.email}
+                onVerified={handleEmailVerified}
+                onBack={() => {
+                    setShowEmailVerification(false);
+                    setPendingUser(null);
+                }}
+            />
+        );
+    }
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 text-white">
@@ -147,7 +244,7 @@ function AuthPage() {
                             <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-pink-600 rounded-lg flex items-center justify-center font-bold text-xl">K</div>
                             <span className="text-xl font-bold">KaliyaX API</span>
                         </div>
-                        <a href="/admin" className="text-slate-400 hover:text-white text-sm transition-colors">
+                        <a href="admin.html" className="text-slate-400 hover:text-white text-sm transition-colors">
                             Admin Login →
                         </a>
                     </div>
@@ -164,36 +261,11 @@ function AuthPage() {
                             <p className="text-slate-400">
                                 {isLogin ? 'Sign in to access your developer dashboard' : 'Join thousands of developers'}
                             </p>
-                            {!isLogin && (
-                                <div className="mt-4 inline-flex items-center space-x-2 bg-purple-500/10 border border-purple-500/30 text-purple-400 px-4 py-2 rounded-full text-sm">
-                                    <span>Signup Bonus</span>
-                                    <span className="font-bold">+160 Coins</span>
-                                </div>
-                            )}
                         </div>
 
                         {error && (
                             <div className="mb-4 p-3 bg-red-500/10 border border-red-500/30 rounded-lg text-red-400 text-sm">
                                 {error}
-                            </div>
-                        )}
-
-                        {success && (
-                            <div className="mb-4 p-3 bg-green-500/10 border border-green-500/30 rounded-lg text-green-400 text-sm">
-                                {success}
-                            </div>
-                        )}
-
-                        {emailSent && (
-                            <div className="mb-4 p-4 bg-blue-500/10 border border-blue-500/30 rounded-lg">
-                                <p className="text-blue-400 text-sm mb-2">📧 Verification email sent!</p>
-                                <p className="text-slate-400 text-xs">Please check your inbox and verify your email before logging in.</p>
-                                <button 
-                                    onClick={resendVerification}
-                                    className="mt-2 text-xs text-blue-400 hover:text-blue-300"
-                                >
-                                    Didn't receive? Resend email
-                                </button>
                             </div>
                         )}
 
@@ -224,14 +296,23 @@ function AuthPage() {
                                 className="w-full px-4 py-3 bg-slate-800/50 border border-slate-700 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none text-white"
                             />
                             {!isLogin && (
-                                <input 
-                                    type="password" 
-                                    placeholder="Confirm Password" 
-                                    value={confirmPassword}
-                                    onChange={(e) => setConfirmPassword(e.target.value)}
-                                    required
-                                    className="w-full px-4 py-3 bg-slate-800/50 border border-slate-700 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none text-white"
-                                />
+                                <>
+                                    <input 
+                                        type="password" 
+                                        placeholder="Confirm Password" 
+                                        value={confirmPassword}
+                                        onChange={(e) => setConfirmPassword(e.target.value)}
+                                        required
+                                        className="w-full px-4 py-3 bg-slate-800/50 border border-slate-700 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none text-white"
+                                    />
+                                    {referralCode && (
+                                        <div className="p-3 bg-green-500/10 border border-green-500/30 rounded-lg">
+                                            <p className="text-green-400 text-sm">
+                                                🎉 Referral code applied! You'll get extra bonus coins
+                                            </p>
+                                        </div>
+                                    )}
+                                </>
                             )}
                             <button 
                                 onClick={isLogin ? handleLogin : handleSignup}
