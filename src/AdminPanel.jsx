@@ -480,9 +480,7 @@ function AdminPanel({ onLogout }) {
                 </div>
             </div>
 
-            {/* MODALS CONTINUE IN NEXT MESSAGE DUE TO LENGTH */}
-            // Add these modals INSIDE the AdminPanel return statement, before closing </div>
-
+            </div>
 {/* Settings Modal */}
 {showSettings && (
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50" onClick={() => setShowSettings(false)}>
@@ -800,6 +798,6 @@ function AdminPanel({ onLogout }) {
         </div>
     </div>
 )}
-        </div>
+        
     );
 }
