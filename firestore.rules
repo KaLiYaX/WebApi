@@ -1,0 +1,38 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Users collection rules
+    match /users/{userId} {
+      // User can read and write their own data
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+      
+      // Allow other authenticated users to read basic user info for transfers
+      allow get: if request.auth != null;
+      
+      // Allow querying users by email for transfers
+      allow list: if request.auth != null;
+      
+      // Transactions subcollection
+      match /transactions/{transactionId} {
+        // User can only access their own transactions
+        allow read, create: if request.auth != null && request.auth.uid == userId;
+        
+        // Prevent modifying existing transactions
+        allow update, delete: if false;
+      }
+    }
+    
+    // API calls logging (optional)
+    match /api_calls/{callId} {
+      allow create: if request.auth != null;
+      allow read: if request.auth != null && resource.data.userId == request.auth.uid;
+    }
+    
+    // System settings (admin only)
+    match /settings/{document} {
+      allow read: if request.auth != null;
+      allow write: if false; // Only admin can write
+    }
+  }
+}
