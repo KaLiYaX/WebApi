@@ -13,6 +13,7 @@
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-functions-compat.js"></script>
     
     <!-- React & ReactDOM -->
     <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
@@ -23,62 +24,21 @@
     
     <!-- Custom Styles -->
     <link rel="stylesheet" href="styles.css">
-    
-    <style>
-        body {
-            margin: 0;
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
-                'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
-            -webkit-font-smoothing: antialiased;
-            -moz-osx-font-smoothing: grayscale;
-        }
-        
-        code {
-            font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New', monospace;
-        }
-
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(10px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-
-        .animate-fade-in {
-            animation: fadeIn 0.3s ease-out;
-        }
-
-        /* Notification styles */
-        .notification-enter {
-            animation: slideInRight 0.3s ease-out;
-        }
-
-        @keyframes slideInRight {
-            from {
-                transform: translateX(100%);
-                opacity: 0;
-            }
-            to {
-                transform: translateX(0);
-                opacity: 1;
-            }
-        }
-    </style>
 </head>
 <body>
     <div id="root"></div>
     
-    <!-- Firebase Config -->
+    <!-- Load scripts in order -->
     <script type="text/babel" src="./src/config/firebase.js"></script>
-    
-    <!-- Components (Load in order) -->
     <script type="text/babel" src="./src/Footer.jsx"></script>
     <script type="text/babel" src="./src/NotificationBar.jsx"></script>
     <script type="text/babel" src="./src/TransactionsTab.jsx"></script>
     <script type="text/babel" src="./src/ApiLibraryTab.jsx"></script>
     <script type="text/babel" src="./src/OverviewTab.jsx"></script>
+    <script type="text/babel" src="./src/UserProfile.jsx"></script>
+    <script type="text/babel" src="./src/EmailVerification.jsx"></script>
     <script type="text/babel" src="./src/Dashboard.jsx"></script>
     <script type="text/babel" src="./src/AuthPage.jsx"></script>
-    <script type="text/babel" src="./src/AdminPanel.jsx"></script>
-    <script type="text/babel" src="./src/AdminLogin.jsx"></script>
     <script type="text/babel" src="./src/App.jsx"></script>
 </body>
 </html>
