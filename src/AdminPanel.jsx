@@ -1,4 +1,5 @@
-// FILE: src/AdminPanel.jsx - COMPLETE WITH ALL FEATURES
+// FILE: src/AdminPanel.jsx (Part 1/3)
+// Admin Panel Component - Main Logic
 
 function AdminPanel({ onLogout }) {
     const [users, setUsers] = useState([]);
@@ -108,11 +109,11 @@ function AdminPanel({ onLogout }) {
                 updatedAt: firebase.firestore.FieldValue.serverTimestamp()
             });
 
-            alert('✅ Settings updated successfully!');
+            alert('Settings updated successfully!');
             setShowSettings(false);
         } catch (error) {
             console.error('Error updating settings:', error);
-            alert('❌ Failed to update settings!');
+            alert('Failed to update settings!');
         }
     };
 
@@ -124,7 +125,7 @@ function AdminPanel({ onLogout }) {
             
             await window.firebaseDB.collection('users').doc(selectedUser.id).collection('notifications').add({
                 type: 'coin_reward',
-                title: 'Coin Reward! 🎉',
+                title: 'Coin Reward',
                 message: `You have received ${amount} coins from admin. Click to claim!`,
                 amount: amount,
                 claimed: false,
@@ -132,12 +133,12 @@ function AdminPanel({ onLogout }) {
                 timestamp: firebase.firestore.FieldValue.serverTimestamp()
             });
 
-            alert(`✅ Coin reward notification sent to ${selectedUser.email}`);
+            alert(`Coin reward notification sent to ${selectedUser.email}`);
             setShowAddCoins(false);
             setCoinAmount('');
         } catch (error) {
             console.error('Error adding coins:', error);
-            alert('❌ Failed to send coin reward!');
+            alert('Failed to send coin reward!');
         }
     };
 
@@ -147,7 +148,7 @@ function AdminPanel({ onLogout }) {
         try {
             const amount = parseInt(coinAmount);
             if (amount > selectedUser.balance) {
-                alert('❌ Amount exceeds user balance!');
+                alert('Amount exceeds user balance!');
                 return;
             }
 
@@ -170,7 +171,7 @@ function AdminPanel({ onLogout }) {
                 timestamp: firebase.firestore.FieldValue.serverTimestamp()
             });
 
-            alert(`✅ Successfully deducted ${amount} coins from ${selectedUser.email}`);
+            alert(`Successfully deducted ${amount} coins from ${selectedUser.email}`);
             setShowDeductCoins(false);
             setCoinAmount('');
             setDeductReason('');
@@ -178,7 +179,7 @@ function AdminPanel({ onLogout }) {
             loadStats();
         } catch (error) {
             console.error('Error deducting coins:', error);
-            alert('❌ Failed to deduct coins!');
+            alert('Failed to deduct coins!');
         }
     };
 
@@ -194,7 +195,7 @@ function AdminPanel({ onLogout }) {
                     const notifRef = window.firebaseDB.collection('users').doc(user.id).collection('notifications').doc();
                     batch.set(notifRef, {
                         type: 'coin_reward',
-                        title: 'Bulk Coin Reward! 💰',
+                        title: 'Bulk Coin Reward',
                         message: `You have received ${amount} coins from admin. Click to claim!`,
                         amount: amount,
                         claimed: false,
@@ -204,19 +205,19 @@ function AdminPanel({ onLogout }) {
                 });
 
                 await batch.commit();
-                alert(`✅ Coin rewards sent to all ${users.length} users!`);
+                alert(`Coin rewards sent to all ${users.length} users!`);
                 setShowBulkCoins(false);
                 setBulkCoinAmount('');
             } catch (error) {
                 console.error('Error sending bulk coins:', error);
-                alert('❌ Failed to send bulk coins!');
+                alert('Failed to send bulk coins!');
             }
         }
     };
 
     const sendNotification = async () => {
         if (!notificationTitle || !notificationMessage) {
-            alert('❌ Please fill all fields!');
+            alert('Please fill all fields!');
             return;
         }
 
@@ -236,7 +237,7 @@ function AdminPanel({ onLogout }) {
                 });
 
                 await batch.commit();
-                alert(`✅ Notification sent to all ${users.length} users!`);
+                alert(`Notification sent to all ${users.length} users!`);
             } else {
                 await window.firebaseDB.collection('users').doc(selectedUser.id).collection('notifications').add({
                     type: 'announcement',
@@ -245,7 +246,7 @@ function AdminPanel({ onLogout }) {
                     read: false,
                     timestamp: firebase.firestore.FieldValue.serverTimestamp()
                 });
-                alert(`✅ Notification sent to ${selectedUser.email}!`);
+                alert(`Notification sent to ${selectedUser.email}!`);
             }
 
             setShowSendNotification(false);
@@ -253,7 +254,7 @@ function AdminPanel({ onLogout }) {
             setNotificationMessage('');
         } catch (error) {
             console.error('Error sending notification:', error);
-            alert('❌ Failed to send notification!');
+            alert('Failed to send notification!');
         }
     };
 
@@ -267,7 +268,7 @@ function AdminPanel({ onLogout }) {
 
             await window.firebaseDB.collection('users').doc(userId).collection('notifications').add({
                 type: 'warning',
-                title: newStatus === 'suspended' ? 'Account Suspended ⚠️' : 'Account Activated ✅',
+                title: newStatus === 'suspended' ? 'Account Suspended' : 'Account Activated',
                 message: newStatus === 'suspended' 
                     ? 'Your account has been suspended by admin' 
                     : 'Your account has been activated',
@@ -275,12 +276,12 @@ function AdminPanel({ onLogout }) {
                 timestamp: firebase.firestore.FieldValue.serverTimestamp()
             });
 
-            alert(`✅ User ${newStatus === 'suspended' ? 'suspended' : 'activated'} successfully!`);
+            alert(`User ${newStatus === 'suspended' ? 'suspended' : 'activated'} successfully!`);
             loadUsers();
             loadStats();
         } catch (error) {
             console.error('Error updating user status:', error);
-            alert('❌ Failed to update user status!');
+            alert('Failed to update user status!');
         }
     };
 
@@ -292,25 +293,25 @@ function AdminPanel({ onLogout }) {
                 apiKeyPaused: newStatus
             });
 
-            alert(`✅ API Key ${newStatus ? 'paused' : 'resumed'} successfully!`);
+            alert(`API Key ${newStatus ? 'paused' : 'resumed'} successfully!`);
             loadUsers();
         } catch (error) {
             console.error('Error toggling API key:', error);
-            alert('❌ Failed to toggle API key!');
+            alert('Failed to toggle API key!');
         }
     };
 
     const deleteUser = async (userId, userEmail) => {
-        if (!confirm(`⚠️ Are you sure you want to delete user: ${userEmail}?`)) return;
+        if (!confirm(`Are you sure you want to delete user: ${userEmail}?`)) return;
 
         try {
             await window.firebaseDB.collection('users').doc(userId).delete();
-            alert('✅ User deleted successfully!');
+            alert('User deleted successfully!');
             loadUsers();
             loadStats();
         } catch (error) {
             console.error('Error deleting user:', error);
-            alert('❌ Failed to delete user!');
+            alert('Failed to delete user!');
         }
     };
 
@@ -322,13 +323,17 @@ function AdminPanel({ onLogout }) {
     if (loading) {
         return (
             <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 flex items-center justify-center">
-                <div className="text-white">
+                <div className="text-white text-center">
                     <div className="w-16 h-16 border-4 border-red-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
                     <p className="text-xl">Loading admin panel...</p>
                 </div>
             </div>
         );
     }
+
+// FILE: src/AdminPanel.jsx (Part 2/3)
+// Admin Panel Component - Main UI Render
+// Note: This continues from Part 1
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 text-white">
@@ -343,16 +348,16 @@ function AdminPanel({ onLogout }) {
                         </div>
                         <div className="flex flex-wrap items-center justify-center gap-2">
                             <button onClick={() => setShowBulkCoins(true)} className="px-3 py-2 bg-green-600 hover:bg-green-700 rounded-lg transition-colors text-xs sm:text-sm">
-                                💰 Bulk Coins
+                                Bulk Coins
                             </button>
                             <button onClick={() => { setNotificationType('all'); setShowSendNotification(true); }} className="px-3 py-2 bg-purple-600 hover:bg-purple-700 rounded-lg transition-colors text-xs sm:text-sm">
-                                📢 Notification
+                                Notification
                             </button>
                             <button onClick={() => setShowSettings(true)} className="px-3 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors text-xs sm:text-sm">
-                                ⚙️ Settings
+                                Settings
                             </button>
                             <button onClick={onLogout} className="px-3 py-2 bg-red-600 hover:bg-red-700 rounded-lg transition-colors text-xs sm:text-sm">
-                                🚪 Logout
+                                Logout
                             </button>
                         </div>
                     </div>
@@ -436,21 +441,21 @@ function AdminPanel({ onLogout }) {
                                                     className="px-2 py-1 bg-blue-600 hover:bg-blue-700 rounded text-xs"
                                                     title="View Details"
                                                 >
-                                                    👁️
+                                                    View
                                                 </button>
                                                 <button 
                                                     onClick={() => { setSelectedUser(user); setShowAddCoins(true); }}
                                                     className="px-2 py-1 bg-green-600 hover:bg-green-700 rounded text-xs"
                                                     title="Add Coins"
                                                 >
-                                                    💰
+                                                    +
                                                 </button>
                                                 <button 
                                                     onClick={() => { setSelectedUser(user); setShowDeductCoins(true); }}
                                                     className="px-2 py-1 bg-orange-600 hover:bg-orange-700 rounded text-xs"
                                                     title="Deduct Coins"
                                                 >
-                                                    ➖
+                                                    -
                                                 </button>
                                                 <button 
                                                     onClick={() => toggleUserStatus(user.id, user.status)}
@@ -461,14 +466,7 @@ function AdminPanel({ onLogout }) {
                                                     }`}
                                                     title={user.status === 'active' ? 'Suspend' : 'Activate'}
                                                 >
-                                                    {user.status === 'active' ? '🚫' : '✓'}
-                                                </button>
-                                                <button 
-                                                    onClick={() => deleteUser(user.id, user.email)}
-                                                    className="px-2 py-1 bg-red-700 hover:bg-red-800 rounded text-xs hidden md:inline"
-                                                    title="Delete"
-                                                >
-                                                    🗑️
+                                                    {user.status === 'active' ? 'Ban' : 'OK'}
                                                 </button>
                                             </div>
                                         </td>
@@ -480,325 +478,324 @@ function AdminPanel({ onLogout }) {
                 </div>
             </div>
 
-            
-{/* Settings Modal */}
-{showSettings && (
-    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50" onClick={() => setShowSettings(false)}>
-        <div className="bg-slate-900 rounded-2xl border border-slate-800 p-6 sm:p-8 max-w-md w-full" onClick={(e) => e.stopPropagation()}>
-            <h2 className="text-xl sm:text-2xl font-bold mb-6">⚙️ System Settings</h2>
-            
-            <div className="space-y-4">
-                <div>
-                    <label className="block text-slate-400 text-sm mb-2">API Cost Per Call (coins)</label>
-                    <input 
-                        type="number"
-                        value={settings.apiCostPerCall}
-                        onChange={(e) => setSettings({...settings, apiCostPerCall: e.target.value})}
-                        className="w-full px-4 py-3 bg-slate-950/50 border border-slate-700 rounded-lg outline-none"
-                    />
-                </div>
+            {/* Continue to Part 3 for Modals... */}
 
-                <div>
-                    <label className="block text-slate-400 text-sm mb-2">Referral Bonus (coins)</label>
-                    <input 
-                        type="number"
-                        value={settings.referralBonus}
-                        onChange={(e) => setSettings({...settings, referralBonus: e.target.value})}
-                        className="w-full px-4 py-3 bg-slate-950/50 border border-slate-700 rounded-lg outline-none"
-                    />
-                </div>
+            // FILE: src/AdminPanel.jsx (Part 3/3 - Final)
+// Admin Panel Component - Modals
+// Note: This continues from Part 2
 
-                <div>
-                    <label className="block text-slate-400 text-sm mb-2">Welcome Bonus (coins)</label>
-                    <input 
-                        type="number"
-                        value={settings.welcomeBonus}
-                        onChange={(e) => setSettings({...settings, welcomeBonus: e.target.value})}
-                        className="w-full px-4 py-3 bg-slate-950/50 border border-slate-700 rounded-lg outline-none"
-                    />
-                </div>
-            </div>
+            {/* Settings Modal */}
+            {showSettings && (
+                <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50" onClick={() => setShowSettings(false)}>
+                    <div className="bg-slate-900 rounded-2xl border border-slate-800 p-6 sm:p-8 max-w-md w-full" onClick={(e) => e.stopPropagation()}>
+                        <h2 className="text-xl sm:text-2xl font-bold mb-6">System Settings</h2>
+                        
+                        <div className="space-y-4">
+                            <div>
+                                <label className="block text-slate-400 text-sm mb-2">API Cost Per Call (coins)</label>
+                                <input 
+                                    type="number"
+                                    value={settings.apiCostPerCall}
+                                    onChange={(e) => setSettings({...settings, apiCostPerCall: e.target.value})}
+                                    className="w-full px-4 py-3 bg-slate-950/50 border border-slate-700 rounded-lg outline-none"
+                                />
+                            </div>
 
-            <div className="flex flex-col sm:flex-row gap-3 mt-6">
-                <button onClick={updateSettings} className="flex-1 py-3 bg-blue-600 hover:bg-blue-700 rounded-lg">Save Changes</button>
-                <button onClick={() => setShowSettings(false)} className="flex-1 py-3 bg-slate-800 hover:bg-slate-700 rounded-lg">Cancel</button>
-            </div>
-        </div>
-    </div>
-)}
+                            <div>
+                                <label className="block text-slate-400 text-sm mb-2">Referral Bonus (coins)</label>
+                                <input 
+                                    type="number"
+                                    value={settings.referralBonus}
+                                    onChange={(e) => setSettings({...settings, referralBonus: e.target.value})}
+                                    className="w-full px-4 py-3 bg-slate-950/50 border border-slate-700 rounded-lg outline-none"
+                                />
+                            </div>
 
-{/* Add Coins Modal */}
-{showAddCoins && (
-    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50" onClick={() => setShowAddCoins(false)}>
-        <div className="bg-slate-900 rounded-2xl border border-slate-800 p-6 sm:p-8 max-w-md w-full" onClick={(e) => e.stopPropagation()}>
-            <h2 className="text-xl sm:text-2xl font-bold mb-6">💰 Add Coins (Notification)</h2>
-            
-            <div className="mb-4 p-3 bg-blue-500/10 border border-blue-500/30 rounded-lg text-blue-400 text-sm">
-                This will send a notification to the user. They need to claim it.
-            </div>
-
-            <div className="space-y-4">
-                <div>
-                    <label className="block text-slate-400 text-sm mb-2">User</label>
-                    <input 
-                        type="text"
-                        value={selectedUser?.email || ''}
-                        disabled
-                        className="w-full px-4 py-3 bg-slate-950/50 border border-slate-700 rounded-lg outline-none"
-                    />
-                </div>
-
-                <div>
-                    <label className="block text-slate-400 text-sm mb-2">Coin Amount</label>
-                    <input 
-                        type="number"
-                        value={coinAmount}
-                        onChange={(e) => setCoinAmount(e.target.value)}
-                        placeholder="Enter amount"
-                        className="w-full px-4 py-3 bg-slate-950/50 border border-slate-700 rounded-lg outline-none"
-                    />
-                </div>
-            </div>
-
-            <div className="flex flex-col sm:flex-row gap-3 mt-6">
-                <button onClick={addCoins} className="flex-1 py-3 bg-green-600 hover:bg-green-700 rounded-lg">Send Reward</button>
-                <button onClick={() => { setShowAddCoins(false); setCoinAmount(''); }} className="flex-1 py-3 bg-slate-800 hover:bg-slate-700 rounded-lg">Cancel</button>
-            </div>
-        </div>
-    </div>
-)}
-
-{/* Deduct Coins Modal */}
-{showDeductCoins && (
-    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50" onClick={() => setShowDeductCoins(false)}>
-        <div className="bg-slate-900 rounded-2xl border border-slate-800 p-6 sm:p-8 max-w-md w-full" onClick={(e) => e.stopPropagation()}>
-            <h2 className="text-xl sm:text-2xl font-bold mb-6">➖ Deduct Coins</h2>
-            
-            <div className="space-y-4">
-                <div>
-                    <label className="block text-slate-400 text-sm mb-2">User</label>
-                    <input 
-                        type="text"
-                        value={selectedUser?.email || ''}
-                        disabled
-                        className="w-full px-4 py-3 bg-slate-950/50 border border-slate-700 rounded-lg outline-none"
-                    />
-                </div>
-
-                <div>
-                    <label className="block text-slate-400 text-sm mb-2">Current Balance: {selectedUser?.balance || 0} coins</label>
-                    <input 
-                        type="number"
-                        value={coinAmount}
-                        onChange={(e) => setCoinAmount(e.target.value)}
-                        placeholder="Enter amount to deduct"
-                        className="w-full px-4 py-3 bg-slate-950/50 border border-slate-700 rounded-lg outline-none"
-                    />
-                </div>
-
-                <div>
-                    <label className="block text-slate-400 text-sm mb-2">Reason (optional)</label>
-                    <textarea
-                        value={deductReason}
-                        onChange={(e) => setDeductReason(e.target.value)}
-                        placeholder="Reason for deduction..."
-                        rows="3"
-                        className="w-full px-4 py-3 bg-slate-950/50 border border-slate-700 rounded-lg outline-none resize-none"
-                    />
-                </div>
-            </div>
-
-            <div className="flex flex-col sm:flex-row gap-3 mt-6">
-                <button onClick={deductCoins} className="flex-1 py-3 bg-orange-600 hover:bg-orange-700 rounded-lg">Deduct Coins</button>
-                <button onClick={() => { setShowDeductCoins(false); setCoinAmount(''); setDeductReason(''); }} className="flex-1 py-3 bg-slate-800 hover:bg-slate-700 rounded-lg">Cancel</button>
-            </div>
-        </div>
-    </div>
-)}
-
-{/* Bulk Coins Modal */}
-{showBulkCoins && (
-    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50" onClick={() => setShowBulkCoins(false)}>
-        <div className="bg-slate-900 rounded-2xl border border-slate-800 p-6 sm:p-8 max-w-md w-full" onClick={(e) => e.stopPropagation()}>
-            <h2 className="text-xl sm:text-2xl font-bold mb-6">💰 Bulk Coin Reward</h2>
-            
-            <div className="mb-4 p-3 bg-yellow-500/10 border border-yellow-500/30 rounded-lg text-yellow-400 text-sm">
-                ⚠️ This will send notifications to ALL {users.length} users!
-            </div>
-
-            <div className="space-y-4">
-                <div>
-                    <label className="block text-slate-400 text-sm mb-2">Coin Amount (per user)</label>
-                    <input 
-                        type="number"
-                        value={bulkCoinAmount}
-                        onChange={(e) => setBulkCoinAmount(e.target.value)}
-                        placeholder="Enter amount"
-                        className="w-full px-4 py-3 bg-slate-950/50 border border-slate-700 rounded-lg outline-none"
-                    />
-                </div>
-
-                <div className="p-4 bg-slate-950/50 border border-slate-700 rounded-lg">
-                    <div className="flex items-center justify-between text-sm mb-2">
-                        <span className="text-slate-400">Recipients:</span>
-                        <span className="font-bold">{users.length} users</span>
-                    </div>
-                    <div className="flex items-center justify-between text-sm">
-                        <span className="text-slate-400">Total Coins:</span>
-                        <span className="font-bold text-yellow-400">{(bulkCoinAmount || 0) * users.length}</span>
-                    </div>
-                </div>
-            </div>
-
-            <div className="flex flex-col sm:flex-row gap-3 mt-6">
-                <button onClick={sendBulkCoins} className="flex-1 py-3 bg-green-600 hover:bg-green-700 rounded-lg">Send to All</button>
-                <button onClick={() => { setShowBulkCoins(false); setBulkCoinAmount(''); }} className="flex-1 py-3 bg-slate-800 hover:bg-slate-700 rounded-lg">Cancel</button>
-            </div>
-        </div>
-    </div>
-)}
-
-{/* Send Notification Modal */}
-{showSendNotification && (
-    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50" onClick={() => setShowSendNotification(false)}>
-        <div className="bg-slate-900 rounded-2xl border border-slate-800 p-6 sm:p-8 max-w-md w-full" onClick={(e) => e.stopPropagation()}>
-            <h2 className="text-xl sm:text-2xl font-bold mb-6">📢 Send Notification</h2>
-            
-            <div className="space-y-4">
-                <div>
-                    <label className="block text-slate-400 text-sm mb-2">Send To</label>
-                    <select
-                        value={notificationType}
-                        onChange={(e) => setNotificationType(e.target.value)}
-                        className="w-full px-4 py-3 bg-slate-950/50 border border-slate-700 rounded-lg outline-none"
-                    >
-                        <option value="all">All Users</option>
-                        <option value="single">Single User</option>
-                    </select>
-                </div>
-
-                {notificationType === 'single' && (
-                    <div>
-                        <label className="block text-slate-400 text-sm mb-2">Select User</label>
-                        <input 
-                            type="text"
-                            value={selectedUser?.email || 'Please select a user from table'}
-                            disabled
-                            className="w-full px-4 py-3 bg-slate-950/50 border border-slate-700 rounded-lg outline-none"
-                        />
-                    </div>
-                )}
-
-                <div>
-                    <label className="block text-slate-400 text-sm mb-2">Title</label>
-                    <input 
-                        type="text"
-                        value={notificationTitle}
-                        onChange={(e) => setNotificationTitle(e.target.value)}
-                        placeholder="Notification title"
-                        className="w-full px-4 py-3 bg-slate-950/50 border border-slate-700 rounded-lg outline-none"
-                    />
-                </div>
-
-                <div>
-                    <label className="block text-slate-400 text-sm mb-2">Message</label>
-                    <textarea
-                        value={notificationMessage}
-                        onChange={(e) => setNotificationMessage(e.target.value)}
-                        placeholder="Notification message..."
-                        rows="4"
-                        className="w-full px-4 py-3 bg-slate-950/50 border border-slate-700 rounded-lg outline-none resize-none"
-                    />
-                </div>
-            </div>
-
-            <div className="flex flex-col sm:flex-row gap-3 mt-6">
-                <button onClick={sendNotification} className="flex-1 py-3 bg-purple-600 hover:bg-purple-700 rounded-lg">Send</button>
-                <button onClick={() => { setShowSendNotification(false); setNotificationTitle(''); setNotificationMessage(''); }} className="flex-1 py-3 bg-slate-800 hover:bg-slate-700 rounded-lg">Cancel</button>
-            </div>
-        </div>
-    </div>
-)}
-
-{/* User Details Modal */}
-{showUserDetails && selectedUser && (
-    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50 overflow-y-auto" onClick={() => setShowUserDetails(false)}>
-        <div className="bg-slate-900 rounded-2xl border border-slate-800 p-6 sm:p-8 max-w-2xl w-full my-8" onClick={(e) => e.stopPropagation()}>
-            <h2 className="text-xl sm:text-2xl font-bold mb-6">👤 User Details</h2>
-            
-            <div className="space-y-6">
-                <div className="flex items-center space-x-4">
-                    <img src={selectedUser.profilePicture} alt="" className="w-20 h-20 rounded-full border-4 border-purple-500" />
-                    <div>
-                        <h3 className="text-2xl font-bold">{selectedUser.name}</h3>
-                        <p className="text-slate-400">{selectedUser.email}</p>
-                    </div>
-                </div>
-
-                <div className="grid md:grid-cols-2 gap-4">
-                    <div className="bg-slate-950/50 rounded-lg p-4 border border-slate-800">
-                        <div className="text-slate-400 text-sm mb-1">Balance</div>
-                        <div className="text-2xl font-bold text-yellow-400">{selectedUser.balance || 0} coins</div>
-                    </div>
-                    <div className="bg-slate-950/50 rounded-lg p-4 border border-slate-800">
-                        <div className="text-slate-400 text-sm mb-1">Total Calls</div>
-                        <div className="text-2xl font-bold">{selectedUser.totalCalls || 0}</div>
-                    </div>
-                    <div className="bg-slate-950/50 rounded-lg p-4 border border-slate-800">
-                        <div className="text-slate-400 text-sm mb-1">Status</div>
-                        <div className={`text-lg font-bold ${selectedUser.status === 'active' ? 'text-green-400' : 'text-red-400'}`}>
-                            {selectedUser.status?.toUpperCase()}
+                            <div>
+                                <label className="block text-slate-400 text-sm mb-2">Welcome Bonus (coins)</label>
+                                <input 
+                                    type="number"
+                                    value={settings.welcomeBonus}
+                                    onChange={(e) => setSettings({...settings, welcomeBonus: e.target.value})}
+                                    className="w-full px-4 py-3 bg-slate-950/50 border border-slate-700 rounded-lg outline-none"
+                                />
+                            </div>
                         </div>
-                    </div>
-                    <div className="bg-slate-950/50 rounded-lg p-4 border border-slate-800">
-                        <div className="text-slate-400 text-sm mb-1">API Key Status</div>
-                        <div className={`text-lg font-bold ${selectedUser.apiKeyPaused ? 'text-orange-400' : 'text-green-400'}`}>
-                            {selectedUser.apiKeyPaused ? 'PAUSED' : 'ACTIVE'}
+
+                        <div className="flex flex-col sm:flex-row gap-3 mt-6">
+                            <button onClick={updateSettings} className="flex-1 py-3 bg-blue-600 hover:bg-blue-700 rounded-lg">Save Changes</button>
+                            <button onClick={() => setShowSettings(false)} className="flex-1 py-3 bg-slate-800 hover:bg-slate-700 rounded-lg">Cancel</button>
                         </div>
                     </div>
                 </div>
+            )}
 
-                <div className="bg-slate-950/50 rounded-lg p-4 border border-slate-800">
-                    <div className="text-slate-400 text-sm mb-2">Bio</div>
-                    <div className="text-sm">{selectedUser.bio || 'No bio provided'}</div>
+            {/* Add Coins Modal */}
+            {showAddCoins && (
+                <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50" onClick={() => setShowAddCoins(false)}>
+                    <div className="bg-slate-900 rounded-2xl border border-slate-800 p-6 sm:p-8 max-w-md w-full" onClick={(e) => e.stopPropagation()}>
+                        <h2 className="text-xl sm:text-2xl font-bold mb-6">Add Coins (Notification)</h2>
+                        
+                        <div className="mb-4 p-3 bg-blue-500/10 border border-blue-500/30 rounded-lg text-blue-400 text-sm">
+                            This will send a notification to the user. They need to claim it.
+                        </div>
+
+                        <div className="space-y-4">
+                            <div>
+                                <label className="block text-slate-400 text-sm mb-2">User</label>
+                                <input 
+                                    type="text"
+                                    value={selectedUser?.email || ''}
+                                    disabled
+                                    className="w-full px-4 py-3 bg-slate-950/50 border border-slate-700 rounded-lg outline-none"
+                                />
+                            </div>
+
+                            <div>
+                                <label className="block text-slate-400 text-sm mb-2">Coin Amount</label>
+                                <input 
+                                    type="number"
+                                    value={coinAmount}
+                                    onChange={(e) => setCoinAmount(e.target.value)}
+                                    placeholder="Enter amount"
+                                    className="w-full px-4 py-3 bg-slate-950/50 border border-slate-700 rounded-lg outline-none"
+                                />
+                            </div>
+                        </div>
+
+                        <div className="flex flex-col sm:flex-row gap-3 mt-6">
+                            <button onClick={addCoins} className="flex-1 py-3 bg-green-600 hover:bg-green-700 rounded-lg">Send Reward</button>
+                            <button onClick={() => { setShowAddCoins(false); setCoinAmount(''); }} className="flex-1 py-3 bg-slate-800 hover:bg-slate-700 rounded-lg">Cancel</button>
+                        </div>
+                    </div>
                 </div>
+            )}
 
-                <div className="bg-slate-950/50 rounded-lg p-4 border border-slate-800">
-                    <div className="text-slate-400 text-sm mb-2">API Key</div>
-                    <div className="text-sm font-mono break-all">{selectedUser.apiKey}</div>
+            {/* Deduct Coins Modal */}
+            {showDeductCoins && (
+                <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50" onClick={() => setShowDeductCoins(false)}>
+                    <div className="bg-slate-900 rounded-2xl border border-slate-800 p-6 sm:p-8 max-w-md w-full" onClick={(e) => e.stopPropagation()}>
+                        <h2 className="text-xl sm:text-2xl font-bold mb-6">Deduct Coins</h2>
+                        
+                        <div className="space-y-4">
+                            <div>
+                                <label className="block text-slate-400 text-sm mb-2">User</label>
+                                <input 
+                                    type="text"
+                                    value={selectedUser?.email || ''}
+                                    disabled
+                                    className="w-full px-4 py-3 bg-slate-950/50 border border-slate-700 rounded-lg outline-none"
+                                />
+                            </div>
+
+                            <div>
+                                <label className="block text-slate-400 text-sm mb-2">Current Balance: {selectedUser?.balance || 0} coins</label>
+                                <input 
+                                    type="number"
+                                    value={coinAmount}
+                                    onChange={(e) => setCoinAmount(e.target.value)}
+                                    placeholder="Enter amount to deduct"
+                                    className="w-full px-4 py-3 bg-slate-950/50 border border-slate-700 rounded-lg outline-none"
+                                />
+                            </div>
+
+                            <div>
+                                <label className="block text-slate-400 text-sm mb-2">Reason (optional)</label>
+                                <textarea
+                                    value={deductReason}
+                                    onChange={(e) => setDeductReason(e.target.value)}
+                                    placeholder="Reason for deduction..."
+                                    rows="3"
+                                    className="w-full px-4 py-3 bg-slate-950/50 border border-slate-700 rounded-lg outline-none resize-none"
+                                />
+                            </div>
+                        </div>
+
+                        <div className="flex flex-col sm:flex-row gap-3 mt-6">
+                            <button onClick={deductCoins} className="flex-1 py-3 bg-orange-600 hover:bg-orange-700 rounded-lg">Deduct Coins</button>
+                            <button onClick={() => { setShowDeductCoins(false); setCoinAmount(''); setDeductReason(''); }} className="flex-1 py-3 bg-slate-800 hover:bg-slate-700 rounded-lg">Cancel</button>
+                        </div>
+                    </div>
                 </div>
+            )}
 
-                <div className="bg-slate-950/50 rounded-lg p-4 border border-slate-800">
-                    <div className="text-slate-400 text-sm mb-2">Referral Code</div>
-                    <div className="text-lg font-bold text-purple-400">{selectedUser.referralCode}</div>
+            {/* Bulk Coins Modal */}
+            {showBulkCoins && (
+                <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50" onClick={() => setShowBulkCoins(false)}>
+                    <div className="bg-slate-900 rounded-2xl border border-slate-800 p-6 sm:p-8 max-w-md w-full" onClick={(e) => e.stopPropagation()}>
+                        <h2 className="text-xl sm:text-2xl font-bold mb-6">Bulk Coin Reward</h2>
+                        
+                        <div className="mb-4 p-3 bg-yellow-500/10 border border-yellow-500/30 rounded-lg text-yellow-400 text-sm">
+                            This will send notifications to ALL {users.length} users!
+                        </div>
+
+                        <div className="space-y-4">
+                            <div>
+                                <label className="block text-slate-400 text-sm mb-2">Coin Amount (per user)</label>
+                                <input 
+                                    type="number"
+                                    value={bulkCoinAmount}
+                                    onChange={(e) => setBulkCoinAmount(e.target.value)}
+                                    placeholder="Enter amount"
+                                    className="w-full px-4 py-3 bg-slate-950/50 border border-slate-700 rounded-lg outline-none"
+                                />
+                            </div>
+
+                            <div className="p-4 bg-slate-950/50 border border-slate-700 rounded-lg">
+                                <div className="flex items-center justify-between text-sm mb-2">
+                                    <span className="text-slate-400">Recipients:</span>
+                                    <span className="font-bold">{users.length} users</span>
+                                </div>
+                                <div className="flex items-center justify-between text-sm">
+                                    <span className="text-slate-400">Total Coins:</span>
+                                    <span className="font-bold text-yellow-400">{(bulkCoinAmount || 0) * users.length}</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="flex flex-col sm:flex-row gap-3 mt-6">
+                            <button onClick={sendBulkCoins} className="flex-1 py-3 bg-green-600 hover:bg-green-700 rounded-lg">Send to All</button>
+                            <button onClick={() => { setShowBulkCoins(false); setBulkCoinAmount(''); }} className="flex-1 py-3 bg-slate-800 hover:bg-slate-700 rounded-lg">Cancel</button>
+                        </div>
+                    </div>
                 </div>
+            )}
 
-                <div className="flex flex-wrap gap-3">
-                    <button onClick={() => { setShowUserDetails(false); setShowAddCoins(true); }} className="px-4 py-2 bg-green-600 hover:bg-green-700 rounded-lg text-sm">
-                        💰 Add Coins
-                    </button>
-                    <button onClick={() => { setShowUserDetails(false); setShowDeductCoins(true); }} className="px-4 py-2 bg-orange-600 hover:bg-orange-700 rounded-lg text-sm">
-                        ➖ Deduct Coins
-                    </button>
-                    <button onClick={() => { setNotificationType('single'); setShowUserDetails(false); setShowSendNotification(true); }} className="px-4 py-2 bg-purple-600 hover:bg-purple-700 rounded-lg text-sm">
-                        📢 Send Notification
-                    </button>
-                    <button onClick={() => toggleApiKeyPause(selectedUser.id, selectedUser.apiKeyPaused)} className="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg text-sm">
-                        {selectedUser.apiKeyPaused ? '▶️ Resume API' : '⏸️ Pause API'}
-                    </button>
-                    <button onClick={() => toggleUserStatus(selectedUser.id, selectedUser.status)} className={`px-4 py-2 rounded-lg text-sm ${selectedUser.status === 'active' ? 'bg-red-600 hover:bg-red-700' : 'bg-green-600 hover:bg-green-700'}`}>
-                        {selectedUser.status === 'active' ? '🚫 Suspend' : '✅ Activate'}
-                    </button>
+            {/* Send Notification Modal */}
+            {showSendNotification && (
+                <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50" onClick={() => setShowSendNotification(false)}>
+                    <div className="bg-slate-900 rounded-2xl border border-slate-800 p-6 sm:p-8 max-w-md w-full" onClick={(e) => e.stopPropagation()}>
+                        <h2 className="text-xl sm:text-2xl font-bold mb-6">Send Notification</h2>
+                        
+                        <div className="space-y-4">
+                            <div>
+                                <label className="block text-slate-400 text-sm mb-2">Send To</label>
+                                <select
+                                    value={notificationType}
+                                    onChange={(e) => setNotificationType(e.target.value)}
+                                    className="w-full px-4 py-3 bg-slate-950/50 border border-slate-700 rounded-lg outline-none"
+                                >
+                                    <option value="all">All Users</option>
+                                    <option value="single">Single User</option>
+                                </select>
+                            </div>
+
+                            {notificationType === 'single' && (
+                                <div>
+                                    <label className="block text-slate-400 text-sm mb-2">Select User</label>
+                                    <input 
+                                        type="text"
+                                        value={selectedUser?.email || 'Please select a user from table'}
+                                        disabled
+                                        className="w-full px-4 py-3 bg-slate-950/50 border border-slate-700 rounded-lg outline-none"
+                                    />
+                                </div>
+                            )}
+
+                            <div>
+                                <label className="block text-slate-400 text-sm mb-2">Title</label>
+                                <input 
+                                    type="text"
+                                    value={notificationTitle}
+                                    onChange={(e) => setNotificationTitle(e.target.value)}
+                                    placeholder="Notification title"
+                                    className="w-full px-4 py-3 bg-slate-950/50 border border-slate-700 rounded-lg outline-none"
+                                />
+                            </div>
+
+                            <div>
+                                <label className="block text-slate-400 text-sm mb-2">Message</label>
+                                <textarea
+                                    value={notificationMessage}
+                                    onChange={(e) => setNotificationMessage(e.target.value)}
+                                    placeholder="Notification message..."
+                                    rows="4"
+                                    className="w-full px-4 py-3 bg-slate-950/50 border border-slate-700 rounded-lg outline-none resize-none"
+                                />
+                            </div>
+                        </div>
+
+                        <div className="flex flex-col sm:flex-row gap-3 mt-6">
+                            <button onClick={sendNotification} className="flex-1 py-3 bg-purple-600 hover:bg-purple-700 rounded-lg">Send</button>
+                            <button onClick={() => { setShowSendNotification(false); setNotificationTitle(''); setNotificationMessage(''); }} className="flex-1 py-3 bg-slate-800 hover:bg-slate-700 rounded-lg">Cancel</button>
+                        </div>
+                    </div>
                 </div>
-            </div>
+            )}
 
-            <button onClick={() => setShowUserDetails(false)} className="w-full mt-6 py-3 bg-slate-800 hover:bg-slate-700 rounded-lg">
-                Close
-            </button>
+            {/* User Details Modal */}
+            {showUserDetails && selectedUser && (
+                <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50 overflow-y-auto" onClick={() => setShowUserDetails(false)}>
+                    <div className="bg-slate-900 rounded-2xl border border-slate-800 p-6 sm:p-8 max-w-2xl w-full my-8" onClick={(e) => e.stopPropagation()}>
+                        <h2 className="text-xl sm:text-2xl font-bold mb-6">User Details</h2>
+                        
+                        <div className="space-y-6">
+                            <div className="flex items-center space-x-4">
+                                <img src={selectedUser.profilePicture} alt="" className="w-20 h-20 rounded-full border-4 border-purple-500" />
+                                <div>
+                                    <h3 className="text-2xl font-bold">{selectedUser.name}</h3>
+                                    <p className="text-slate-400">{selectedUser.email}</p>
+                                </div>
+                            </div>
+
+                            <div className="grid md:grid-cols-2 gap-4">
+                                <div className="bg-slate-950/50 rounded-lg p-4 border border-slate-800">
+                                    <div className="text-slate-400 text-sm mb-1">Balance</div>
+                                    <div className="text-2xl font-bold text-yellow-400">{selectedUser.balance || 0} coins</div>
+                                </div>
+                                <div className="bg-slate-950/50 rounded-lg p-4 border border-slate-800">
+                                    <div className="text-slate-400 text-sm mb-1">Total Calls</div>
+                                    <div className="text-2xl font-bold">{selectedUser.totalCalls || 0}</div>
+                                </div>
+                                <div className="bg-slate-950/50 rounded-lg p-4 border border-slate-800">
+                                    <div className="text-slate-400 text-sm mb-1">Status</div>
+                                    <div className={`text-lg font-bold ${selectedUser.status === 'active' ? 'text-green-400' : 'text-red-400'}`}>
+                                        {selectedUser.status?.toUpperCase()}
+                                    </div>
+                                </div>
+                                <div className="bg-slate-950/50 rounded-lg p-4 border border-slate-800">
+                                    <div className="text-slate-400 text-sm mb-1">API Key Status</div>
+                                    <div className={`text-lg font-bold ${selectedUser.apiKeyPaused ? 'text-orange-400' : 'text-green-400'}`}>
+                                        {selectedUser.apiKeyPaused ? 'PAUSED' : 'ACTIVE'}
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="bg-slate-950/50 rounded-lg p-4 border border-slate-800">
+                                <div className="text-slate-400 text-sm mb-2">API Key</div>
+                                <div className="text-sm font-mono break-all">{selectedUser.apiKey}</div>
+                            </div>
+
+                            <div className="bg-slate-950/50 rounded-lg p-4 border border-slate-800">
+                                <div className="text-slate-400 text-sm mb-2">Referral Code</div>
+                                <div className="text-lg font-bold text-purple-400">{selectedUser.referralCode}</div>
+                            </div>
+
+                            <div className="flex flex-wrap gap-3">
+                                <button onClick={() => { setShowUserDetails(false); setShowAddCoins(true); }} className="px-4 py-2 bg-green-600 hover:bg-green-700 rounded-lg text-sm">
+                                    Add Coins
+                                </button>
+                                <button onClick={() => { setShowUserDetails(false); setShowDeductCoins(true); }} className="px-4 py-2 bg-orange-600 hover:bg-orange-700 rounded-lg text-sm">
+                                    Deduct Coins
+                                </button>
+                                <button onClick={() => { setNotificationType('single'); setShowUserDetails(false); setShowSendNotification(true); }} className="px-4 py-2 bg-purple-600 hover:bg-purple-700 rounded-lg text-sm">
+                                    Send Notification
+                                </button>
+                                <button onClick={() => toggleApiKeyPause(selectedUser.id, selectedUser.apiKeyPaused)} className="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg text-sm">
+                                    {selectedUser.apiKeyPaused ? 'Resume API' : 'Pause API'}
+                                </button>
+                                <button onClick={() => toggleUserStatus(selectedUser.id, selectedUser.status)} className={`px-4 py-2 rounded-lg text-sm ${selectedUser.status === 'active' ? 'bg-red-600 hover:bg-red-700' : 'bg-green-600 hover:bg-green-700'}`}>
+                                    {selectedUser.status === 'active' ? 'Suspend' : 'Activate'}
+                                </button>
+                            </div>
+                        </div>
+
+                        <button onClick={() => setShowUserDetails(false)} className="w-full mt-6 py-3 bg-slate-800 hover:bg-slate-700 rounded-lg">
+                            Close
+                        </button>
+                    </div>
+                </div>
+            )}
         </div>
-    </div>
-)}
-            </div>
-        
     );
 }
