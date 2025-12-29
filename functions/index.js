@@ -12,8 +12,8 @@ admin.initializeApp();
 const transporter = nodemailer.createTransport({
     service: 'gmail',
     auth: {
-        user: 'your-email@gmail.com', // ඔබේ Gmail
-        pass: 'your-app-password' // Gmail App Password (16 characters)
+        user: 'kaliya.x.git@gmail.com', // ඔබේ Gmail
+        pass: 'ibegjjidlfqlkhin' // Gmail App Password (16 characters)
     }
 });
 
