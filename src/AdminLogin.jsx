@@ -1,3 +1,6 @@
+// FILE: src/AdminLogin.jsx
+// Admin Login Component
+
 function AdminLogin({ onLogin }) {
     const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
@@ -43,7 +46,7 @@ function AdminLogin({ onLogin }) {
                         </div>
                     )}
 
-                    <div className="space-y-4">
+                    <form onSubmit={handleLogin} className="space-y-4">
                         <div>
                             <label className="block text-slate-400 text-sm mb-2">Username</label>
                             <input 
@@ -68,7 +71,7 @@ function AdminLogin({ onLogin }) {
                             />
                         </div>
                         <button 
-                            onClick={handleLogin}
+                            type="submit"
                             disabled={loading}
                             className="w-full py-3 bg-gradient-to-r from-red-600 to-orange-600 rounded-lg font-semibold hover:shadow-lg hover:shadow-red-500/50 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2"
                         >
@@ -86,17 +89,17 @@ function AdminLogin({ onLogin }) {
                                 </>
                             )}
                         </button>
-                    </div>
+                    </form>
 
                     <div className="mt-6 text-center">
                         <a href="/" className="text-slate-400 hover:text-white text-sm transition-colors">
-                            ← Back to User Portal
+                            Back to User Portal
                         </a>
                     </div>
                 </div>
 
                 <div className="mt-6 text-center text-slate-400 text-sm">
-                    <p>⚠️ Admin access only</p>
+                    <p>Admin access only</p>
                 </div>
             </div>
         </div>
