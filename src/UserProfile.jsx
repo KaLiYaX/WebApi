@@ -1,4 +1,5 @@
 // FILE: src/UserProfile.jsx
+// User Profile Component
 
 function UserProfile({ user, userData, onClose, onUpdate }) {
     const [activeSection, setActiveSection] = useState('profile');
@@ -7,12 +8,8 @@ function UserProfile({ user, userData, onClose, onUpdate }) {
     const [profilePicture, setProfilePicture] = useState(userData?.profilePicture || '');
     const [newPassword, setNewPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
-    const [newEmail, setNewEmail] = useState('');
-    const [emailPassword, setEmailPassword] = useState('');
+    const [currentPassword, setCurrentPassword] = useState('');
     const [deletePassword, setDeletePassword] = useState('');
-    const [showVerification, setShowVerification] = useState(false);
-    const [verificationType, setVerificationType] = useState('');
-    const [pendingData, setPendingData] = useState(null);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
     const [success, setSuccess] = useState('');
@@ -49,7 +46,7 @@ function UserProfile({ user, userData, onClose, onUpdate }) {
                 profilePicture: profilePicture
             });
 
-            setSuccess('Profile updated successfully! ✅');
+            setSuccess('Profile updated successfully!');
             onUpdate();
         } catch (err) {
             setError('Failed to update profile');
@@ -71,75 +68,23 @@ function UserProfile({ user, userData, onClose, onUpdate }) {
 
         setLoading(true);
         setError('');
+        setSuccess('');
 
         try {
-            const sendEmailFunction = window.firebaseFunctions.httpsCallable('sendVerificationEmail');
-            await sendEmailFunction({ email: user.email, type: 'password_reset' });
-            
-            setPendingData({ password: newPassword });
-            setVerificationType('password');
-            setShowVerification(true);
-        } catch (err) {
-            setError('Failed to send verification code');
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    const changeEmail = async () => {
-        if (!newEmail || !emailPassword) {
-            setError('Please fill all fields');
-            return;
-        }
-
-        setLoading(true);
-        setError('');
-
-        try {
-            const credential = firebase.auth.EmailAuthProvider.credential(user.email, emailPassword);
+            const credential = firebase.auth.EmailAuthProvider.credential(user.email, currentPassword);
             await user.reauthenticateWithCredential(credential);
-
-            const sendEmailFunction = window.firebaseFunctions.httpsCallable('sendVerificationEmail');
-            await sendEmailFunction({ email: newEmail, type: 'email_change' });
             
-            setPendingData({ email: newEmail });
-            setVerificationType('email');
-            setShowVerification(true);
+            await user.updatePassword(newPassword);
+            setSuccess('Password changed successfully!');
+            setNewPassword('');
+            setConfirmPassword('');
+            setCurrentPassword('');
         } catch (err) {
             if (err.code === 'auth/wrong-password') {
-                setError('Incorrect password');
+                setError('Current password is incorrect');
             } else {
-                setError('Failed to initiate email change');
+                setError('Failed to change password');
             }
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    const handleVerified = async () => {
-        setLoading(true);
-        setError('');
-
-        try {
-            if (verificationType === 'password') {
-                await user.updatePassword(pendingData.password);
-                setSuccess('Password changed successfully! ✅');
-                setNewPassword('');
-                setConfirmPassword('');
-            } else if (verificationType === 'email') {
-                await user.updateEmail(pendingData.email);
-                await window.firebaseDB.collection('users').doc(user.uid).update({
-                    email: pendingData.email
-                });
-                setSuccess('Email changed successfully! ✅');
-                setNewEmail('');
-                setEmailPassword('');
-            }
-            
-            setShowVerification(false);
-            setPendingData(null);
-        } catch (err) {
-            setError('Failed to complete action');
         } finally {
             setLoading(false);
         }
@@ -151,7 +96,7 @@ function UserProfile({ user, userData, onClose, onUpdate }) {
             return;
         }
 
-        if (!confirm('⚠️ Are you sure? This action cannot be undone!')) return;
+        if (!confirm('Are you sure? This action cannot be undone!')) return;
 
         setLoading(true);
         setError('');
@@ -174,20 +119,6 @@ function UserProfile({ user, userData, onClose, onUpdate }) {
             setLoading(false);
         }
     };
-
-    if (showVerification) {
-        return (
-            <EmailVerification
-                email={verificationType === 'email' ? pendingData.email : user.email}
-                onVerified={handleVerified}
-                type={verificationType === 'email' ? 'email_change' : 'password_reset'}
-                onBack={() => {
-                    setShowVerification(false);
-                    setPendingData(null);
-                }}
-            />
-        );
-    }
 
     return (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50 overflow-y-auto">
@@ -213,9 +144,9 @@ function UserProfile({ user, userData, onClose, onUpdate }) {
                                         : 'border-transparent text-slate-400 hover:text-white'
                                 }`}
                             >
-                                {tab === 'profile' && '👤 Profile'}
-                                {tab === 'security' && '🔒 Security'}
-                                {tab === 'delete' && '🗑️ Delete Account'}
+                                {tab === 'profile' && 'Profile'}
+                                {tab === 'security' && 'Security'}
+                                {tab === 'delete' && 'Delete Account'}
                             </button>
                         ))}
                     </div>
@@ -274,9 +205,14 @@ function UserProfile({ user, userData, onClose, onUpdate }) {
                             <button
                                 onClick={updateProfile}
                                 disabled={loading}
-                                className="w-full py-3 bg-purple-600 hover:bg-purple-700 rounded-lg font-semibold disabled:opacity-50"
+                                className="w-full py-3 bg-purple-600 hover:bg-purple-700 rounded-lg font-semibold disabled:opacity-50 flex items-center justify-center"
                             >
-                                {loading ? 'Updating...' : 'Save Changes'}
+                                {loading ? (
+                                    <>
+                                        <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
+                                        <span>Updating...</span>
+                                    </>
+                                ) : 'Save Changes'}
                             </button>
                         </div>
                     )}
@@ -284,8 +220,15 @@ function UserProfile({ user, userData, onClose, onUpdate }) {
                     {activeSection === 'security' && (
                         <div className="space-y-8">
                             <div className="bg-slate-800/30 rounded-xl p-6 border border-slate-700">
-                                <h3 className="text-xl font-bold mb-4">🔐 Change Password</h3>
+                                <h3 className="text-xl font-bold mb-4">Change Password</h3>
                                 <div className="space-y-4">
+                                    <input
+                                        type="password"
+                                        placeholder="Current Password"
+                                        value={currentPassword}
+                                        onChange={(e) => setCurrentPassword(e.target.value)}
+                                        className="w-full px-4 py-3 bg-slate-900 border border-slate-700 rounded-lg outline-none"
+                                    />
                                     <input
                                         type="password"
                                         placeholder="New Password"
@@ -303,39 +246,14 @@ function UserProfile({ user, userData, onClose, onUpdate }) {
                                     <button
                                         onClick={changePassword}
                                         disabled={loading}
-                                        className="w-full py-3 bg-blue-600 hover:bg-blue-700 rounded-lg disabled:opacity-50"
+                                        className="w-full py-3 bg-blue-600 hover:bg-blue-700 rounded-lg disabled:opacity-50 flex items-center justify-center"
                                     >
-                                        Change Password
-                                    </button>
-                                </div>
-                            </div>
-
-                            <div className="bg-slate-800/30 rounded-xl p-6 border border-slate-700">
-                                <h3 className="text-xl font-bold mb-4">📧 Change Email</h3>
-                                <div className="space-y-4">
-                                    <div className="text-slate-400 text-sm">
-                                        Current: {user.email}
-                                    </div>
-                                    <input
-                                        type="email"
-                                        placeholder="New Email"
-                                        value={newEmail}
-                                        onChange={(e) => setNewEmail(e.target.value)}
-                                        className="w-full px-4 py-3 bg-slate-900 border border-slate-700 rounded-lg outline-none"
-                                    />
-                                    <input
-                                        type="password"
-                                        placeholder="Current Password"
-                                        value={emailPassword}
-                                        onChange={(e) => setEmailPassword(e.target.value)}
-                                        className="w-full px-4 py-3 bg-slate-900 border border-slate-700 rounded-lg outline-none"
-                                    />
-                                    <button
-                                        onClick={changeEmail}
-                                        disabled={loading}
-                                        className="w-full py-3 bg-blue-600 hover:bg-blue-700 rounded-lg disabled:opacity-50"
-                                    >
-                                        Change Email
+                                        {loading ? (
+                                            <>
+                                                <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
+                                                <span>Changing...</span>
+                                            </>
+                                        ) : 'Change Password'}
                                     </button>
                                 </div>
                             </div>
@@ -344,7 +262,7 @@ function UserProfile({ user, userData, onClose, onUpdate }) {
 
                     {activeSection === 'delete' && (
                         <div className="bg-red-500/10 rounded-xl p-6 border border-red-500/30">
-                            <h3 className="text-xl font-bold text-red-400 mb-4">⚠️ Delete Account</h3>
+                            <h3 className="text-xl font-bold text-red-400 mb-4">Delete Account</h3>
                             <p className="text-slate-400 mb-6">
                                 This action cannot be undone. All your data will be permanently deleted.
                             </p>
@@ -358,9 +276,14 @@ function UserProfile({ user, userData, onClose, onUpdate }) {
                             <button
                                 onClick={deleteAccount}
                                 disabled={loading}
-                                className="w-full py-3 bg-red-600 hover:bg-red-700 rounded-lg font-semibold disabled:opacity-50"
+                                className="w-full py-3 bg-red-600 hover:bg-red-700 rounded-lg font-semibold disabled:opacity-50 flex items-center justify-center"
                             >
-                                {loading ? 'Deleting...' : 'Delete My Account'}
+                                {loading ? (
+                                    <>
+                                        <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
+                                        <span>Deleting...</span>
+                                    </>
+                                ) : 'Delete My Account'}
                             </button>
                         </div>
                     )}
