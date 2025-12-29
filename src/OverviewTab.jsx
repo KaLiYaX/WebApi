@@ -1,5 +1,5 @@
 // FILE: src/OverviewTab.jsx
-// Overview Tab Component (Emoji-free version)
+// Overview Tab Component - Complete Fixed Version
 
 function OverviewTab({ userData, user, copied, copyApiKey, regenerateApiKey, toggleApiKeyPause }) {
     const [showTransfer, setShowTransfer] = useState(false);
@@ -8,21 +8,24 @@ function OverviewTab({ userData, user, copied, copyApiKey, regenerateApiKey, tog
     const [showReferral, setShowReferral] = useState(false);
     const [copiedReferral, setCopiedReferral] = useState(false);
     const [apiCost, setApiCost] = useState(5);
+    const [referralBonus, setReferralBonus] = useState(60);
     const [customCoins, setCustomCoins] = useState('');
     const [customPrice, setCustomPrice] = useState('');
 
     useEffect(() => {
-        loadApiCost();
+        loadSettings();
     }, []);
 
-    const loadApiCost = async () => {
+    const loadSettings = async () => {
         try {
-            const doc = await window.firebaseDB.collection('settings').doc('api_cost').get();
-            if (doc.exists) {
-                setApiCost(doc.data().costPerCall);
+            const settingsDoc = await window.firebaseDB.collection('settings').doc('system').get();
+            if (settingsDoc.exists) {
+                const settings = settingsDoc.data();
+                setApiCost(settings.apiCostPerCall || 5);
+                setReferralBonus(settings.referralBonus || 60);
             }
         } catch (error) {
-            console.error('Error loading API cost:', error);
+            console.error('Error loading settings:', error);
         }
     };
 
@@ -44,18 +47,18 @@ function OverviewTab({ userData, user, copied, copyApiKey, regenerateApiKey, tog
 
     const handleTransfer = async () => {
         if (!transferAmount || !transferEmail) {
-            alert('Please fill all fields!');
+            alert('❌ Please fill all fields!');
             return;
         }
 
         const amount = parseInt(transferAmount);
         if (amount <= 0 || amount > userData.balance) {
-            alert('Invalid amount!');
+            alert('❌ Invalid amount!');
             return;
         }
 
         if (transferEmail === userData.email) {
-            alert('Cannot transfer to yourself!');
+            alert('❌ Cannot transfer to yourself!');
             return;
         }
 
@@ -66,7 +69,7 @@ function OverviewTab({ userData, user, copied, copyApiKey, regenerateApiKey, tog
                 .get();
 
             if (recipientQuery.empty) {
-                alert('User not found!');
+                alert('❌ User not found!');
                 return;
             }
 
@@ -107,13 +110,13 @@ function OverviewTab({ userData, user, copied, copyApiKey, regenerateApiKey, tog
                 timestamp: firebase.firestore.FieldValue.serverTimestamp()
             });
 
-            alert('Transfer successful!');
+            alert('✅ Transfer successful!');
             setShowTransfer(false);
             setTransferAmount('');
             setTransferEmail('');
         } catch (error) {
             console.error('Transfer error:', error);
-            alert('Transfer failed!');
+            alert('❌ Transfer failed!');
         }
     };
 
@@ -125,7 +128,7 @@ function OverviewTab({ userData, user, copied, copyApiKey, regenerateApiKey, tog
 
     const buyCustomPackage = async () => {
         if (!customCoins || !customPrice) {
-            alert('Please enter coins and price!');
+            alert('❌ Please enter coins and price!');
             return;
         }
         
@@ -228,7 +231,7 @@ function OverviewTab({ userData, user, copied, copyApiKey, regenerateApiKey, tog
 
                 <div className="bg-gradient-to-br from-purple-600 to-pink-600 rounded-2xl p-6 text-white cursor-pointer hover:shadow-lg hover:shadow-purple-500/50 transition-all" onClick={() => setShowReferral(true)}>
                     <h3 className="text-xl font-bold mb-2">Earn Coins</h3>
-                    <div className="text-3xl font-bold mb-2">+40 Bonus</div>
+                    <div className="text-3xl font-bold mb-2">+{referralBonus} Bonus</div>
                     <p className="text-purple-100 text-sm mb-4">Share your referral link and earn rewards instantly.</p>
                     <button className="w-full py-2 bg-white text-purple-600 rounded-lg font-semibold hover:bg-purple-50 transition-colors">
                         Share Now
@@ -339,7 +342,7 @@ function OverviewTab({ userData, user, copied, copyApiKey, regenerateApiKey, tog
                 <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50" onClick={() => setShowReferral(false)}>
                     <div className="bg-slate-900 rounded-2xl border border-slate-800 p-8 max-w-md w-full" onClick={(e) => e.stopPropagation()}>
                         <h2 className="text-2xl font-bold mb-4">Share & Earn</h2>
-                        <p className="text-slate-400 mb-6">Share your referral link and earn 40 coins for each signup!</p>
+                        <p className="text-slate-400 mb-6">Share your referral link and earn {referralBonus} coins for each signup!</p>
                         
                         <div className="bg-slate-950 rounded-lg p-4 mb-4 break-all text-sm border border-slate-800">
                             {getReferralLink()}
@@ -347,7 +350,7 @@ function OverviewTab({ userData, user, copied, copyApiKey, regenerateApiKey, tog
 
                         <div className="space-y-3">
                             <button onClick={copyReferralLink} className="w-full py-3 bg-purple-600 hover:bg-purple-700 rounded-lg font-semibold transition-colors">
-                                {copiedReferral ? 'Copied!' : 'Copy Link'}
+                                {copiedReferral ? '✅ Copied!' : 'Copy Link'}
                             </button>
                             <button onClick={shareReferral} className="w-full py-3 bg-green-600 hover:bg-green-700 rounded-lg font-semibold transition-colors flex items-center justify-center space-x-2">
                                 <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
