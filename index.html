@@ -26,9 +26,13 @@
 </head>
 <body>
     <div id="root"></div>
+    <div id="toast-root"></div>
+    <div id="dialog-root"></div>
     
     <!-- Load scripts in order -->
     <script type="text/babel" src="./src/config/firebase.js"></script>
+    <script type="text/babel" src="./src/ToastNotification.jsx"></script>
+    <script type="text/babel" src="./src/ConfirmDialog.jsx"></script>
     <script type="text/babel" src="./src/Footer.jsx"></script>
     <script type="text/babel" src="./src/NotificationBar.jsx"></script>
     <script type="text/babel" src="./src/TransactionsTab.jsx"></script>
@@ -38,5 +42,14 @@
     <script type="text/babel" src="./src/Dashboard.jsx"></script>
     <script type="text/babel" src="./src/AuthPage.jsx"></script>
     <script type="text/babel" src="./src/App.jsx"></script>
+    
+    <!-- Initialize Toast and Dialog -->
+    <script type="text/babel">
+        const toastRoot = ReactDOM.createRoot(document.getElementById('toast-root'));
+        toastRoot.render(<ToastNotification />);
+        
+        const dialogRoot = ReactDOM.createRoot(document.getElementById('dialog-root'));
+        dialogRoot.render(<ConfirmDialog />);
+    </script>
 </body>
 </html>
