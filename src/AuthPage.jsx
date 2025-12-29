@@ -1,4 +1,5 @@
 // FILE: src/AuthPage.jsx
+// Authentication Page Component
 
 function AuthPage() {
     const [isLogin, setIsLogin] = useState(true);
@@ -9,8 +10,6 @@ function AuthPage() {
     const [referralCode, setReferralCode] = useState('');
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
-    const [showEmailVerification, setShowEmailVerification] = useState(false);
-    const [pendingUser, setPendingUser] = useState(null);
 
     useEffect(() => {
         const urlParams = new URLSearchParams(window.location.search);
@@ -68,74 +67,39 @@ function AuthPage() {
         setError('');
 
         if (password !== confirmPassword) {
-            setError('Passwords do not match!');
+            setError('Passwords do not match');
             return;
         }
 
         if (password.length < 6) {
-            setError('Password must be at least 6 characters!');
+            setError('Password must be at least 6 characters');
             return;
         }
 
         setLoading(true);
 
         try {
-            const welcomeDoc = await window.firebaseDB.collection('settings').doc('welcome_bonus').get();
-            const welcomeBonus = welcomeDoc.exists ? welcomeDoc.data().bonus : 100;
-
-            const sendEmailFunction = window.firebaseFunctions.httpsCallable('sendVerificationEmail');
-            await sendEmailFunction({ email, type: 'signup' });
-
-            setPendingUser({
-                email,
-                password,
-                name: name || email.split('@')[0],
-                welcomeBonus,
-                referralCode
-            });
-
-            setShowEmailVerification(true);
-        } catch (err) {
-            if (err.code === 'auth/email-already-in-use') {
-                setError('Email already in use');
-            } else {
-                setError(err.message);
-            }
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    const handleEmailVerified = async () => {
-        setLoading(true);
-
-        try {
-            const userCredential = await window.firebaseAuth.createUserWithEmailAndPassword(
-                pendingUser.email, 
-                pendingUser.password
-            );
+            const userCredential = await window.firebaseAuth.createUserWithEmailAndPassword(email, password);
             const user = userCredential.user;
 
             const apiKey = 'kx_live_' + Math.random().toString(36).substring(2, 15) + 
                           Math.random().toString(36).substring(2, 15);
 
-            const profilePicture = generateProfilePicture(pendingUser.name);
+            const userName = name || email.split('@')[0];
+            const profilePicture = generateProfilePicture(userName);
 
-            let totalBonus = pendingUser.welcomeBonus;
+            let totalBonus = 100;
             let referrerId = null;
 
-            if (pendingUser.referralCode) {
+            if (referralCode) {
                 const referrerQuery = await window.firebaseDB.collection('users')
-                    .where('referralCode', '==', pendingUser.referralCode)
+                    .where('referralCode', '==', referralCode)
                     .limit(1)
                     .get();
 
                 if (!referrerQuery.empty) {
                     referrerId = referrerQuery.docs[0].id;
-                    
-                    const referralDoc = await window.firebaseDB.collection('settings').doc('referral_bonus').get();
-                    const referralBonus = referralDoc.exists ? referralDoc.data().bonus : 40;
-
+                    const referralBonus = 60;
                     totalBonus += referralBonus;
 
                     await window.firebaseDB.collection('users').doc(referrerId).update({
@@ -145,17 +109,17 @@ function AuthPage() {
                     await window.firebaseDB.collection('users').doc(referrerId).collection('transactions').add({
                         type: 'referral',
                         amount: referralBonus,
-                        from: pendingUser.email,
-                        description: `Referral bonus from ${pendingUser.email}`,
+                        from: email,
+                        description: `Referral bonus from ${email}`,
                         timestamp: firebase.firestore.FieldValue.serverTimestamp()
                     });
 
                     await window.firebaseDB.collection('users').doc(referrerId).collection('notifications').add({
                         type: 'coin_reward',
-                        title: 'Referral Bonus! 🎉',
-                        message: `You earned ${referralBonus} coins for referring ${pendingUser.email}. Click to claim!`,
-                        amount: referralBonus,
-                        claimed: false,
+                        title: 'Referral Bonus',
+                        message: `You earned ${referralBonus} coins for referring ${email}`,
+                        amount: 0,
+                        claimed: true,
                         read: false,
                         timestamp: firebase.firestore.FieldValue.serverTimestamp()
                     });
@@ -165,8 +129,8 @@ function AuthPage() {
             const userReferralCode = user.uid.substring(0, 8).toUpperCase();
 
             await window.firebaseDB.collection('users').doc(user.uid).set({
-                name: pendingUser.name,
-                email: pendingUser.email,
+                name: userName,
+                email: email,
                 apiKey: apiKey,
                 balance: totalBonus,
                 profilePicture: profilePicture,
@@ -183,39 +147,28 @@ function AuthPage() {
             await window.firebaseDB.collection('users').doc(user.uid).collection('transactions').add({
                 type: 'signup_bonus',
                 amount: totalBonus,
-                description: referrerId 
-                    ? `Welcome bonus + Referral bonus` 
-                    : 'Welcome bonus',
+                description: referrerId ? 'Welcome bonus + Referral bonus' : 'Welcome bonus',
                 timestamp: firebase.firestore.FieldValue.serverTimestamp()
             });
 
             await window.firebaseDB.collection('users').doc(user.uid).collection('notifications').add({
                 type: 'announcement',
-                title: 'Welcome to KaliyaX API! 🎉',
-                message: `Your account has been created successfully. You received ${totalBonus} coins as bonus!`,
+                title: 'Welcome to KaliyaX API',
+                message: `Your account has been created successfully. You received ${totalBonus} coins as bonus`,
                 read: false,
                 timestamp: firebase.firestore.FieldValue.serverTimestamp()
             });
+
         } catch (err) {
-            setError(err.message);
+            if (err.code === 'auth/email-already-in-use') {
+                setError('Email already in use');
+            } else {
+                setError(err.message);
+            }
         } finally {
             setLoading(false);
         }
     };
-
-    if (showEmailVerification) {
-        return (
-            <EmailVerification
-                email={pendingUser.email}
-                onVerified={handleEmailVerified}
-                type="signup"
-                onBack={() => {
-                    setShowEmailVerification(false);
-                    setPendingUser(null);
-                }}
-            />
-        );
-    }
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 text-white">
@@ -229,7 +182,7 @@ function AuthPage() {
                             <span className="text-xl font-bold">KaliyaX API</span>
                         </div>
                         <a href="admin.html" className="text-slate-400 hover:text-white text-sm transition-colors">
-                            Admin Login →
+                            Admin Login
                         </a>
                     </div>
                 </div>
@@ -292,7 +245,7 @@ function AuthPage() {
                                     {referralCode && (
                                         <div className="p-3 bg-green-500/10 border border-green-500/30 rounded-lg">
                                             <p className="text-green-400 text-sm">
-                                                🎉 Referral code applied! You'll get extra bonus coins
+                                                Referral code applied! You'll get extra bonus coins
                                             </p>
                                         </div>
                                     )}
@@ -301,9 +254,16 @@ function AuthPage() {
                             <button 
                                 type="submit"
                                 disabled={loading}
-                                className="w-full py-3 bg-gradient-to-r from-purple-600 to-pink-600 rounded-lg font-semibold hover:shadow-lg hover:shadow-purple-500/50 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                                className="w-full py-3 bg-gradient-to-r from-purple-600 to-pink-600 rounded-lg font-semibold hover:shadow-lg hover:shadow-purple-500/50 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
                             >
-                                {loading ? 'Loading...' : (isLogin ? 'Log In' : 'Create Account')}
+                                {loading ? (
+                                    <>
+                                        <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
+                                        <span>{isLogin ? 'Signing in...' : 'Creating account...'}</span>
+                                    </>
+                                ) : (
+                                    isLogin ? 'Log In' : 'Create Account'
+                                )}
                             </button>
                         </form>
 
