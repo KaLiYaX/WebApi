@@ -1,3 +1,5 @@
+// FILE: src/Dashboard.jsx (UPDATED WITH NOTIFICATIONS TAB)
+
 function Dashboard({ user }) {
     const [userData, setUserData] = useState(null);
     const [activeTab, setActiveTab] = useState('overview');
@@ -5,6 +7,7 @@ function Dashboard({ user }) {
     const [copied, setCopied] = useState(false);
     const [showMenu, setShowMenu] = useState(false);
     const [showProfile, setShowProfile] = useState(false);
+    const [unreadNotifications, setUnreadNotifications] = useState(0);
 
     useEffect(() => {
         loadUserData();
@@ -15,7 +18,20 @@ function Dashboard({ user }) {
             }
         });
 
-        return () => unsubscribe();
+        // Listen to notifications for badge count
+        const notifUnsubscribe = window.firebaseDB
+            .collection('users')
+            .doc(user.uid)
+            .collection('notifications')
+            .where('read', '==', false)
+            .onSnapshot((snapshot) => {
+                setUnreadNotifications(snapshot.size);
+            });
+
+        return () => {
+            unsubscribe();
+            notifUnsubscribe();
+        };
     }, [user]);
 
     const loadUserData = async () => {
@@ -94,7 +110,7 @@ function Dashboard({ user }) {
         );
     }
 
-if (userData?.status === 'suspended') {
+    if (userData?.status === 'suspended') {
         return (
             <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 flex items-center justify-center px-4">
                 <div className="text-center max-w-md">
@@ -145,7 +161,18 @@ if (userData?.status === 'suspended') {
                             <button onClick={() => handleTabChange('apis')} className={`px-3 py-2 rounded-lg transition-colors ${activeTab === 'apis' ? 'bg-purple-600' : 'hover:bg-slate-800'}`}>API Library</button>
                             <button onClick={() => handleTabChange('transactions')} className={`px-3 py-2 rounded-lg transition-colors ${activeTab === 'transactions' ? 'bg-purple-600' : 'hover:bg-slate-800'}`}>Transactions</button>
                             
-                            <NotificationBar user={user} />
+                            {/* Notifications Button with Badge */}
+                            <button 
+                                onClick={() => handleTabChange('notifications')} 
+                                className={`relative px-3 py-2 rounded-lg transition-colors ${activeTab === 'notifications' ? 'bg-purple-600' : 'hover:bg-slate-800'}`}
+                            >
+                                Notifications
+                                {unreadNotifications > 0 && (
+                                    <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-xs rounded-full flex items-center justify-center font-bold">
+                                        {unreadNotifications > 9 ? '9+' : unreadNotifications}
+                                    </span>
+                                )}
+                            </button>
                             
                             <div className="flex items-center space-x-3 bg-slate-800/50 px-4 py-2 rounded-full border border-slate-700">
                                 <svg className="w-4 h-4 text-yellow-500" fill="currentColor" viewBox="0 0 20 20">
@@ -178,6 +205,14 @@ if (userData?.status === 'suspended') {
                             <button onClick={() => handleTabChange('overview')} className="w-full text-left px-4 py-2 hover:bg-slate-800 rounded-lg">Overview</button>
                             <button onClick={() => handleTabChange('apis')} className="w-full text-left px-4 py-2 hover:bg-slate-800 rounded-lg">API Library</button>
                             <button onClick={() => handleTabChange('transactions')} className="w-full text-left px-4 py-2 hover:bg-slate-800 rounded-lg">Transactions</button>
+                            <button onClick={() => handleTabChange('notifications')} className="w-full text-left px-4 py-2 hover:bg-slate-800 rounded-lg flex items-center justify-between">
+                                <span>Notifications</span>
+                                {unreadNotifications > 0 && (
+                                    <span className="w-5 h-5 bg-red-500 text-white text-xs rounded-full flex items-center justify-center font-bold">
+                                        {unreadNotifications > 9 ? '9+' : unreadNotifications}
+                                    </span>
+                                )}
+                            </button>
                             <button onClick={() => { setShowProfile(true); setShowMenu(false); }} className="w-full text-left px-4 py-2 hover:bg-slate-800 rounded-lg">Profile</button>
                             <div className="px-4 py-2 flex items-center space-x-2">
                                 <span className="font-bold">Balance: {userData?.balance || 0} coins</span>
@@ -192,6 +227,7 @@ if (userData?.status === 'suspended') {
                 {activeTab === 'overview' && <OverviewTab userData={userData} user={user} copied={copied} copyApiKey={copyApiKey} regenerateApiKey={regenerateApiKey} toggleApiKeyPause={toggleApiKeyPause} />}
                 {activeTab === 'apis' && <ApiLibraryTab />}
                 {activeTab === 'transactions' && <TransactionsTab user={user} />}
+                {activeTab === 'notifications' && <NotificationsTab user={user} />}
             </div>
 
             {showProfile && (
