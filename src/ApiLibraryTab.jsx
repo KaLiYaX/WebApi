@@ -1,3 +1,6 @@
+// FILE: src/ApiLibraryTab.jsx
+// API Library Tab Component
+
 function ApiLibraryTab() {
     const [searchQuery, setSearchQuery] = useState('');
     const [selectedCategory, setSelectedCategory] = useState('All');
@@ -186,7 +189,7 @@ function ApiLibraryTab() {
                                     <p className="font-semibold text-yellow-400">Cost per Request</p>
                                     <p className="text-slate-400 text-sm">5 coins will be deducted</p>
                                 </div>
-                                <div className="text-2xl font-bold text-yellow-400">5 🪙</div>
+                                <div className="text-2xl font-bold text-yellow-400">5 coins</div>
                             </div>
                         </div>
                     </div>
