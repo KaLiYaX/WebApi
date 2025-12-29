@@ -1,6 +1,3 @@
-// FILE: src/NotificationBar.jsx
-// Notification Bar Component - Updated with Coin Claim
-
 function NotificationBar({ user }) {
     const [notifications, setNotifications] = useState([]);
     const [showNotifications, setShowNotifications] = useState(false);
@@ -73,20 +70,17 @@ function NotificationBar({ user }) {
         if (notification.claimed) return;
 
         try {
-            // Update user balance
             await window.firebaseDB.collection('users').doc(user.uid).update({
                 balance: firebase.firestore.FieldValue.increment(notification.amount)
             });
 
-            // Add transaction
             await window.firebaseDB.collection('users').doc(user.uid).collection('transactions').add({
                 type: 'admin_credit',
                 amount: notification.amount,
-                description: 'Claimed coin reward from admin',
+                description: 'Claimed coin reward',
                 timestamp: firebase.firestore.FieldValue.serverTimestamp()
             });
 
-            // Mark as claimed
             await window.firebaseDB
                 .collection('users')
                 .doc(user.uid)
@@ -97,10 +91,10 @@ function NotificationBar({ user }) {
                     read: true
                 });
 
-            window.showToast(`Successfully claimed ${notification.amount} coins! 🎉`, 'success');
+            alert(`✅ Successfully claimed ${notification.amount} coins!`);
         } catch (error) {
             console.error('Error claiming coins:', error);
-            window.showToast('Failed to claim coins!', 'error');
+            alert('❌ Failed to claim coins!');
         }
     };
 
@@ -112,8 +106,6 @@ function NotificationBar({ user }) {
                 .collection('notifications')
                 .doc(notificationId)
                 .delete();
-                
-            window.showToast('Notification deleted', 'info');
         } catch (error) {
             console.error('Error deleting notification:', error);
         }
@@ -134,7 +126,6 @@ function NotificationBar({ user }) {
             });
 
             await batch.commit();
-            window.showToast('All notifications marked as read', 'success');
         } catch (error) {
             console.error('Error marking all as read:', error);
         }
@@ -189,7 +180,7 @@ function NotificationBar({ user }) {
             </button>
 
             {showNotifications && (
-                <div className="absolute right-0 mt-2 w-96 bg-slate-900 border border-slate-800 rounded-xl shadow-2xl max-h-[500px] overflow-hidden z-50 animate-fade-in">
+                <div className="absolute right-0 mt-2 w-96 bg-slate-900 border border-slate-800 rounded-xl shadow-2xl max-h-[500px] overflow-hidden z-50">
                     <div className="p-4 border-b border-slate-800 flex items-center justify-between sticky top-0 bg-slate-900">
                         <h3 className="font-bold text-lg">Notifications</h3>
                         <div className="flex items-center space-x-2">
@@ -245,48 +236,13 @@ function NotificationBar({ user }) {
                                                     onClick={(e) => { e.stopPropagation(); claimCoins(notif); }}
                                                     className="mt-3 px-4 py-2 bg-green-600 hover:bg-green-700 rounded-lg text-sm font-semibold transition-colors w-full"
                                                 >
-                                                    💰 Claim {notif.amount} Coins
-                                                </button>
-                                            )}
-                                            
-                                            {notif.type === 'coin_reward' && notif.claimed && (
-                                                <div className="mt-3 px-4 py-2 bg-green-500/10 border border-green-500/30 rounded-lg text-sm text-green-400 text-center">
-                                                    ✅ Claimed
-                                                </div>
-                                            )}
-                                            
-                                            <div className="flex items-center justify-between mt-2">
-                                                <span className="text-slate-500 text-xs">{formatTime(notif.timestamp)}</span>
-                                                <button 
-                                                    onClick={(e) => { e.stopPropagation(); deleteNotification(notif.id); }}
-                                                    className="text-slate-500 hover:text-red-400 text-xs"
-                                                >
-                                                    Delete
-                                                </button>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            ))
-                        )}
-                    </div>
-                </div>
-            )}
-        </div>
-    );
-}                                           
-                                            {notif.type === 'coin_reward' && !notif.claimed && notif.amount > 0 && (
-                                                <button 
-                                                    onClick={(e) => { e.stopPropagation(); claimCoins(notif); }}
-                                                    className="mt-3 px-4 py-2 bg-green-600 hover:bg-green-700 rounded-lg text-sm font-semibold transition-colors w-full"
-                                                >
                                                     Claim {notif.amount} Coins
                                                 </button>
                                             )}
                                             
                                             {notif.type === 'coin_reward' && notif.claimed && (
                                                 <div className="mt-3 px-4 py-2 bg-green-500/10 border border-green-500/30 rounded-lg text-sm text-green-400 text-center">
-                                                    Claimed
+                                                    ✅ Claimed
                                                 </div>
                                             )}
                                             
