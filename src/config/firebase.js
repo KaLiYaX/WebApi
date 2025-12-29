@@ -1,4 +1,6 @@
+// FILE: src/config/firebase.js
 // Firebase Configuration
+
 const firebaseConfig = {
     apiKey: "AIzaSyBYGqBQmI4y3bPzRI5MOgBQUW5Wdu4rbFM",
     authDomain: "kaliyax-api.firebaseapp.com",
@@ -10,16 +12,26 @@ const firebaseConfig = {
 };
 
 // Initialize Firebase
-firebase.initializeApp(firebaseConfig);
+if (!firebase.apps.length) {
+    firebase.initializeApp(firebaseConfig);
+}
 
 // Initialize Firebase services
 const auth = firebase.auth();
 const db = firebase.firestore();
-const functions = firebase.functions();
 
 // Export services globally
 window.firebaseAuth = auth;
 window.firebaseDB = db;
-window.firebaseFunctions = functions;
 
-console.log('✅ Firebase initialized successfully!');
+// Enable persistence
+db.enablePersistence()
+    .catch((err) => {
+        if (err.code === 'failed-precondition') {
+            console.warn('Multiple tabs open, persistence enabled in first tab only');
+        } else if (err.code === 'unimplemented') {
+            console.warn('Browser does not support persistence');
+        }
+    });
+
+console.log('Firebase initialized successfully');
