@@ -1,3 +1,6 @@
+// FILE: src/TransactionsTab.jsx
+// Transactions Tab Component
+
 function TransactionsTab({ user }) {
     const [transactions, setTransactions] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -58,6 +61,7 @@ function TransactionsTab({ user }) {
                 );
             case 'signup_bonus':
             case 'referral':
+            case 'admin_credit':
                 return (
                     <svg className="w-5 h-5 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V5.5A2.5 2.5 0 109.5 8H12zm-7 4h14M5 12a2 2 0 110-4h14a2 2 0 110 4M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7" />
@@ -86,6 +90,10 @@ function TransactionsTab({ user }) {
                 return 'Welcome Bonus';
             case 'referral':
                 return `Referral from ${tx.from}`;
+            case 'admin_credit':
+                return 'Admin Credit';
+            case 'admin_deduct':
+                return 'Admin Deduction';
             default:
                 return tx.description || 'Transaction';
         }
@@ -115,7 +123,10 @@ function TransactionsTab({ user }) {
     if (loading) {
         return (
             <div className="flex items-center justify-center py-12">
-                <div className="text-slate-400">Loading transactions...</div>
+                <div className="text-center">
+                    <div className="w-12 h-12 border-4 border-purple-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+                    <p className="text-slate-400">Loading transactions...</p>
+                </div>
             </div>
         );
     }
