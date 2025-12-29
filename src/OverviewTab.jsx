@@ -1,4 +1,5 @@
 // FILE: src/OverviewTab.jsx
+// Overview Tab Component (Emoji-free version)
 
 function OverviewTab({ userData, user, copied, copyApiKey, regenerateApiKey, toggleApiKeyPause }) {
     const [showTransfer, setShowTransfer] = useState(false);
@@ -98,7 +99,7 @@ function OverviewTab({ userData, user, copied, copyApiKey, regenerateApiKey, tog
 
             await window.firebaseDB.collection('users').doc(recipientId).collection('notifications').add({
                 type: 'coin_reward',
-                title: 'Coins Received! 💰',
+                title: 'Coins Received',
                 message: `You received ${amount} coins from ${userData.email}`,
                 amount: 0,
                 claimed: true,
@@ -106,13 +107,13 @@ function OverviewTab({ userData, user, copied, copyApiKey, regenerateApiKey, tog
                 timestamp: firebase.firestore.FieldValue.serverTimestamp()
             });
 
-            alert('✅ Transfer successful!');
+            alert('Transfer successful!');
             setShowTransfer(false);
             setTransferAmount('');
             setTransferEmail('');
         } catch (error) {
             console.error('Transfer error:', error);
-            alert('❌ Transfer failed!');
+            alert('Transfer failed!');
         }
     };
 
@@ -136,7 +137,7 @@ function OverviewTab({ userData, user, copied, copyApiKey, regenerateApiKey, tog
     return (
         <>
             <div className="mb-8">
-                <h1 className="text-3xl font-bold mb-2">Hello, {userData?.name || 'Developer'} 👋</h1>
+                <h1 className="text-3xl font-bold mb-2">Hello, {userData?.name || 'Developer'}</h1>
                 <p className="text-slate-400">Welcome back! Here's your API overview.</p>
             </div>
 
@@ -160,7 +161,7 @@ function OverviewTab({ userData, user, copied, copyApiKey, regenerateApiKey, tog
                         </svg>
                         <span className="text-xs text-slate-400">Status</span>
                     </div>
-                    <div className="text-3xl font-bold capitalize">{userData?.apiKeyPaused ? '⏸️ Paused' : '▶️ Active'}</div>
+                    <div className="text-3xl font-bold capitalize">{userData?.apiKeyPaused ? 'Paused' : 'Active'}</div>
                     <p className="text-slate-400 text-sm mt-1">API status</p>
                 </div>
 
@@ -220,13 +221,13 @@ function OverviewTab({ userData, user, copied, copyApiKey, regenerateApiKey, tog
                             <span>Regenerate</span>
                         </button>
                         <button onClick={toggleApiKeyPause} className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors border ${userData?.apiKeyPaused ? 'bg-green-600 hover:bg-green-700 border-green-700' : 'bg-orange-600 hover:bg-orange-700 border-orange-700'}`}>
-                            <span>{userData?.apiKeyPaused ? '▶️ Resume' : '⏸️ Pause'}</span>
+                            <span>{userData?.apiKeyPaused ? 'Resume' : 'Pause'}</span>
                         </button>
                     </div>
                 </div>
 
                 <div className="bg-gradient-to-br from-purple-600 to-pink-600 rounded-2xl p-6 text-white cursor-pointer hover:shadow-lg hover:shadow-purple-500/50 transition-all" onClick={() => setShowReferral(true)}>
-                    <h3 className="text-xl font-bold mb-2">Earn Coins 💰</h3>
+                    <h3 className="text-xl font-bold mb-2">Earn Coins</h3>
                     <div className="text-3xl font-bold mb-2">+40 Bonus</div>
                     <p className="text-purple-100 text-sm mb-4">Share your referral link and earn rewards instantly.</p>
                     <button className="w-full py-2 bg-white text-purple-600 rounded-lg font-semibold hover:bg-purple-50 transition-colors">
@@ -236,7 +237,7 @@ function OverviewTab({ userData, user, copied, copyApiKey, regenerateApiKey, tog
             </div>
 
             <div className="bg-slate-900/80 backdrop-blur-xl rounded-2xl border border-slate-800 p-6 mb-8">
-                <h2 className="text-xl font-bold mb-2">Coin Packages 💎</h2>
+                <h2 className="text-xl font-bold mb-2">Coin Packages</h2>
                 <p className="text-slate-400 mb-6">Secure & Instant Top-up via WhatsApp</p>
                 <div className="grid md:grid-cols-3 gap-6 mb-6">
                     <div className="relative bg-slate-950/50 rounded-xl p-6 border border-slate-800 hover:border-purple-500/50 transition-all">
@@ -280,7 +281,7 @@ function OverviewTab({ userData, user, copied, copyApiKey, regenerateApiKey, tog
                 </div>
 
                 <div className="bg-gradient-to-r from-purple-500/10 to-pink-500/10 border border-purple-500/30 rounded-xl p-6">
-                    <h3 className="text-lg font-bold mb-4">🎨 Custom Package</h3>
+                    <h3 className="text-lg font-bold mb-4">Custom Package</h3>
                     <div className="grid md:grid-cols-2 gap-4 mb-4">
                         <input 
                             type="number"
@@ -304,7 +305,7 @@ function OverviewTab({ userData, user, copied, copyApiKey, regenerateApiKey, tog
             </div>
 
             <div className="bg-slate-900/80 backdrop-blur-xl rounded-2xl border border-slate-800 p-6">
-                <h2 className="text-xl font-bold mb-4">Send Coins to Friend 🎁</h2>
+                <h2 className="text-xl font-bold mb-4">Send Coins to Friend</h2>
                 <p className="text-slate-400 mb-6">Transfer your coins to another developer's account instantly.</p>
                 {!showTransfer ? (
                     <button onClick={() => setShowTransfer(true)} className="px-6 py-3 bg-purple-600 hover:bg-purple-700 rounded-lg font-semibold transition-colors">
@@ -337,7 +338,7 @@ function OverviewTab({ userData, user, copied, copyApiKey, regenerateApiKey, tog
             {showReferral && (
                 <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50" onClick={() => setShowReferral(false)}>
                     <div className="bg-slate-900 rounded-2xl border border-slate-800 p-8 max-w-md w-full" onClick={(e) => e.stopPropagation()}>
-                        <h2 className="text-2xl font-bold mb-4">Share & Earn 💰</h2>
+                        <h2 className="text-2xl font-bold mb-4">Share & Earn</h2>
                         <p className="text-slate-400 mb-6">Share your referral link and earn 40 coins for each signup!</p>
                         
                         <div className="bg-slate-950 rounded-lg p-4 mb-4 break-all text-sm border border-slate-800">
@@ -346,7 +347,7 @@ function OverviewTab({ userData, user, copied, copyApiKey, regenerateApiKey, tog
 
                         <div className="space-y-3">
                             <button onClick={copyReferralLink} className="w-full py-3 bg-purple-600 hover:bg-purple-700 rounded-lg font-semibold transition-colors">
-                                {copiedReferral ? '✅ Copied!' : '📋 Copy Link'}
+                                {copiedReferral ? 'Copied!' : 'Copy Link'}
                             </button>
                             <button onClick={shareReferral} className="w-full py-3 bg-green-600 hover:bg-green-700 rounded-lg font-semibold transition-colors flex items-center justify-center space-x-2">
                                 <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
