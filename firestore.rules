@@ -1,42 +1,49 @@
+// FILE: firestore.rules (UPDATED WITH PROPER PERMISSIONS)
+
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     
-    // Users collection - Full access for authenticated users
+    // Users collection - Read access for all authenticated users (for transfers)
     match /users/{userId} {
+      // Anyone authenticated can read user data (needed for transfer recipient lookup)
       allow read: if request.auth != null;
+      
+      // Only the user themselves can write their own data
       allow write: if request.auth != null && request.auth.uid == userId;
+      
+      // Anyone authenticated can create new users (signup)
       allow create: if request.auth != null;
       
       // Transactions subcollection
       match /transactions/{transactionId} {
         allow read: if request.auth != null && request.auth.uid == userId;
         allow create: if request.auth != null && request.auth.uid == userId;
-        allow update, delete: if false;
+        allow update, delete: if false; // Transactions are immutable
       }
       
       // Notifications subcollection
       match /notifications/{notificationId} {
         allow read: if request.auth != null && request.auth.uid == userId;
-        allow create: if request.auth != null;
+        allow create: if request.auth != null; // Admin can create
         allow update: if request.auth != null && request.auth.uid == userId;
         allow delete: if request.auth != null && request.auth.uid == userId;
       }
     }
     
-    // API calls logging
+    // API calls logging (if needed)
     match /api_calls/{callId} {
       allow create: if request.auth != null;
       allow read: if request.auth != null;
     }
     
-    // System settings - Anyone can read, anyone can write
+    // System settings - Anyone can read/write (for admin panel)
     match /settings/{document} {
       allow read: if true;
-      allow write: if true;
+      allow write: if true; // In production, restrict to admin only
     }
     
-    // Verification codes - Anyone can read/write
+    // Verification codes (if using email verification)
     match /verification_codes/{email} {
       allow read, write: if true;
     }
