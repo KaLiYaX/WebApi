@@ -1,4 +1,18 @@
 {
+  "functions": {
+    "source": ".",
+    "ignore": [
+      "node_modules",
+      ".git",
+      "firebase-debug.log",
+      "firebase-debug.*.log",
+      "src",
+      "styles.css",
+      "*.html",
+      "*.md",
+      ".env*"
+    ]
+  },
   "firestore": {
     "rules": "firestore.rules",
     "indexes": "firestore.indexes.json"
@@ -8,7 +22,9 @@
     "ignore": [
       "firebase.json",
       "**/.*",
-      "**/node_modules/**"
+      "**/node_modules/**",
+      "functions",
+      "index.js"
     ],
     "rewrites": [
       {
