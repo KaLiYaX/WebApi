@@ -1,5 +1,3 @@
-
-
 function AdminPanel({ onLogout }) {
     const [users, setUsers] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -19,7 +17,7 @@ function AdminPanel({ onLogout }) {
     const [notificationType, setNotificationType] = useState('all');
     const [settings, setSettings] = useState({
         apiCostPerCall: 5,
-        referralBonus: 40,
+        referralBonus: 60,
         welcomeBonus: 100
     });
     const [stats, setStats] = useState({
@@ -77,15 +75,24 @@ function AdminPanel({ onLogout }) {
 
     const loadSettings = async () => {
         try {
-            const apiCostDoc = await window.firebaseDB.collection('settings').doc('api_cost').get();
-            const referralDoc = await window.firebaseDB.collection('settings').doc('referral_bonus').get();
-            const welcomeDoc = await window.firebaseDB.collection('settings').doc('welcome_bonus').get();
-
-            setSettings({
-                apiCostPerCall: apiCostDoc.exists ? apiCostDoc.data().costPerCall : 5,
-                referralBonus: referralDoc.exists ? referralDoc.data().bonus : 40,
-                welcomeBonus: welcomeDoc.exists ? welcomeDoc.data().bonus : 100
-            });
+            const settingsDoc = await window.firebaseDB.collection('settings').doc('system').get();
+            
+            if (settingsDoc.exists) {
+                const data = settingsDoc.data();
+                setSettings({
+                    apiCostPerCall: data.apiCostPerCall || 5,
+                    referralBonus: data.referralBonus || 60,
+                    welcomeBonus: data.welcomeBonus || 100
+                });
+            } else {
+                // Create default settings
+                await window.firebaseDB.collection('settings').doc('system').set({
+                    apiCostPerCall: 5,
+                    referralBonus: 60,
+                    welcomeBonus: 100,
+                    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                });
+            }
         } catch (error) {
             console.error('Error loading settings:', error);
         }
@@ -93,34 +100,50 @@ function AdminPanel({ onLogout }) {
 
     const updateSettings = async () => {
         try {
-            await window.firebaseDB.collection('settings').doc('api_cost').set({
-                costPerCall: parseInt(settings.apiCostPerCall),
-                updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-            });
+            // Validate inputs
+            const apiCost = parseInt(settings.apiCostPerCall);
+            const refBonus = parseInt(settings.referralBonus);
+            const welcomeBonus = parseInt(settings.welcomeBonus);
 
-            await window.firebaseDB.collection('settings').doc('referral_bonus').set({
-                bonus: parseInt(settings.referralBonus),
-                updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-            });
+            if (isNaN(apiCost) || isNaN(refBonus) || isNaN(welcomeBonus)) {
+                alert('❌ Please enter valid numbers!');
+                return;
+            }
 
-            await window.firebaseDB.collection('settings').doc('welcome_bonus').set({
-                bonus: parseInt(settings.welcomeBonus),
-                updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-            });
+            if (apiCost < 1 || refBonus < 0 || welcomeBonus < 0) {
+                alert('❌ Values must be positive!');
+                return;
+            }
 
-            alert('Settings updated successfully!');
+            // Update settings in Firestore
+            await window.firebaseDB.collection('settings').doc('system').set({
+                apiCostPerCall: apiCost,
+                referralBonus: refBonus,
+                welcomeBonus: welcomeBonus,
+                updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+            }, { merge: true });
+
+            alert('✅ Settings updated successfully!');
             setShowSettings(false);
+            await loadSettings(); // Reload to confirm
         } catch (error) {
             console.error('Error updating settings:', error);
-            alert('Failed to update settings!');
+            alert('❌ Failed to update settings: ' + error.message);
         }
     };
 
     const addCoins = async () => {
-        if (!selectedUser || !coinAmount) return;
+        if (!selectedUser || !coinAmount) {
+            alert('❌ Please enter coin amount!');
+            return;
+        }
 
         try {
             const amount = parseInt(coinAmount);
+            if (isNaN(amount) || amount <= 0) {
+                alert('❌ Please enter a valid amount!');
+                return;
+            }
             
             await window.firebaseDB.collection('users').doc(selectedUser.id).collection('notifications').add({
                 type: 'coin_reward',
@@ -132,22 +155,30 @@ function AdminPanel({ onLogout }) {
                 timestamp: firebase.firestore.FieldValue.serverTimestamp()
             });
 
-            alert(`Coin reward notification sent to ${selectedUser.email}`);
+            alert(`✅ Coin reward notification sent to ${selectedUser.email}`);
             setShowAddCoins(false);
             setCoinAmount('');
         } catch (error) {
             console.error('Error adding coins:', error);
-            alert('Failed to send coin reward!');
+            alert('❌ Failed to send coin reward!');
         }
     };
 
     const deductCoins = async () => {
-        if (!selectedUser || !coinAmount) return;
+        if (!selectedUser || !coinAmount) {
+            alert('❌ Please fill all fields!');
+            return;
+        }
 
         try {
             const amount = parseInt(coinAmount);
+            if (isNaN(amount) || amount <= 0) {
+                alert('❌ Please enter a valid amount!');
+                return;
+            }
+
             if (amount > selectedUser.balance) {
-                alert('Amount exceeds user balance!');
+                alert('❌ Amount exceeds user balance!');
                 return;
             }
 
@@ -170,7 +201,7 @@ function AdminPanel({ onLogout }) {
                 timestamp: firebase.firestore.FieldValue.serverTimestamp()
             });
 
-            alert(`Successfully deducted ${amount} coins from ${selectedUser.email}`);
+            alert(`✅ Successfully deducted ${amount} coins from ${selectedUser.email}`);
             setShowDeductCoins(false);
             setCoinAmount('');
             setDeductReason('');
@@ -178,45 +209,53 @@ function AdminPanel({ onLogout }) {
             loadStats();
         } catch (error) {
             console.error('Error deducting coins:', error);
-            alert('Failed to deduct coins!');
+            alert('❌ Failed to deduct coins!');
         }
     };
 
     const sendBulkCoins = async () => {
-        if (!bulkCoinAmount) return;
+        if (!bulkCoinAmount) {
+            alert('❌ Please enter coin amount!');
+            return;
+        }
 
         const amount = parseInt(bulkCoinAmount);
-        if (confirm(`Send ${amount} coins to ALL ${users.length} users?`)) {
-            try {
-                const batch = window.firebaseDB.batch();
+        if (isNaN(amount) || amount <= 0) {
+            alert('❌ Please enter a valid amount!');
+            return;
+        }
 
-                users.forEach(user => {
-                    const notifRef = window.firebaseDB.collection('users').doc(user.id).collection('notifications').doc();
-                    batch.set(notifRef, {
-                        type: 'coin_reward',
-                        title: 'Bulk Coin Reward',
-                        message: `You have received ${amount} coins from admin. Click to claim!`,
-                        amount: amount,
-                        claimed: false,
-                        read: false,
-                        timestamp: firebase.firestore.FieldValue.serverTimestamp()
-                    });
+        if (!confirm(`Send ${amount} coins to ALL ${users.length} users?`)) return;
+
+        try {
+            const batch = window.firebaseDB.batch();
+
+            users.forEach(user => {
+                const notifRef = window.firebaseDB.collection('users').doc(user.id).collection('notifications').doc();
+                batch.set(notifRef, {
+                    type: 'coin_reward',
+                    title: 'Bulk Coin Reward',
+                    message: `You have received ${amount} coins from admin. Click to claim!`,
+                    amount: amount,
+                    claimed: false,
+                    read: false,
+                    timestamp: firebase.firestore.FieldValue.serverTimestamp()
                 });
+            });
 
-                await batch.commit();
-                alert(`Coin rewards sent to all ${users.length} users!`);
-                setShowBulkCoins(false);
-                setBulkCoinAmount('');
-            } catch (error) {
-                console.error('Error sending bulk coins:', error);
-                alert('Failed to send bulk coins!');
-            }
+            await batch.commit();
+            alert(`✅ Coin rewards sent to all ${users.length} users!`);
+            setShowBulkCoins(false);
+            setBulkCoinAmount('');
+        } catch (error) {
+            console.error('Error sending bulk coins:', error);
+            alert('❌ Failed to send bulk coins!');
         }
     };
 
     const sendNotification = async () => {
         if (!notificationTitle || !notificationMessage) {
-            alert('Please fill all fields!');
+            alert('❌ Please fill all fields!');
             return;
         }
 
@@ -236,8 +275,13 @@ function AdminPanel({ onLogout }) {
                 });
 
                 await batch.commit();
-                alert(`Notification sent to all ${users.length} users!`);
+                alert(`✅ Notification sent to all ${users.length} users!`);
             } else {
+                if (!selectedUser) {
+                    alert('❌ Please select a user first!');
+                    return;
+                }
+
                 await window.firebaseDB.collection('users').doc(selectedUser.id).collection('notifications').add({
                     type: 'announcement',
                     title: notificationTitle,
@@ -245,7 +289,7 @@ function AdminPanel({ onLogout }) {
                     read: false,
                     timestamp: firebase.firestore.FieldValue.serverTimestamp()
                 });
-                alert(`Notification sent to ${selectedUser.email}!`);
+                alert(`✅ Notification sent to ${selectedUser.email}!`);
             }
 
             setShowSendNotification(false);
@@ -253,7 +297,7 @@ function AdminPanel({ onLogout }) {
             setNotificationMessage('');
         } catch (error) {
             console.error('Error sending notification:', error);
-            alert('Failed to send notification!');
+            alert('❌ Failed to send notification!');
         }
     };
 
@@ -275,12 +319,12 @@ function AdminPanel({ onLogout }) {
                 timestamp: firebase.firestore.FieldValue.serverTimestamp()
             });
 
-            alert(`User ${newStatus === 'suspended' ? 'suspended' : 'activated'} successfully!`);
+            alert(`✅ User ${newStatus === 'suspended' ? 'suspended' : 'activated'} successfully!`);
             loadUsers();
             loadStats();
         } catch (error) {
             console.error('Error updating user status:', error);
-            alert('Failed to update user status!');
+            alert('❌ Failed to update user status!');
         }
     };
 
@@ -292,11 +336,11 @@ function AdminPanel({ onLogout }) {
                 apiKeyPaused: newStatus
             });
 
-            alert(`API Key ${newStatus ? 'paused' : 'resumed'} successfully!`);
+            alert(`✅ API Key ${newStatus ? 'paused' : 'resumed'} successfully!`);
             loadUsers();
         } catch (error) {
             console.error('Error toggling API key:', error);
-            alert('Failed to toggle API key!');
+            alert('❌ Failed to toggle API key!');
         }
     };
 
@@ -305,12 +349,12 @@ function AdminPanel({ onLogout }) {
 
         try {
             await window.firebaseDB.collection('users').doc(userId).delete();
-            alert('User deleted successfully!');
+            alert('✅ User deleted successfully!');
             loadUsers();
             loadStats();
         } catch (error) {
             console.error('Error deleting user:', error);
-            alert('Failed to delete user!');
+            alert('❌ Failed to delete user!');
         }
     };
 
@@ -329,7 +373,6 @@ function AdminPanel({ onLogout }) {
             </div>
         );
     }
-
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 text-white">
@@ -474,8 +517,6 @@ function AdminPanel({ onLogout }) {
                 </div>
             </div>
 
-        
-
             {/* Settings Modal */}
             {showSettings && (
                 <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50" onClick={() => setShowSettings(false)}>
@@ -490,6 +531,7 @@ function AdminPanel({ onLogout }) {
                                     value={settings.apiCostPerCall}
                                     onChange={(e) => setSettings({...settings, apiCostPerCall: e.target.value})}
                                     className="w-full px-4 py-3 bg-slate-950/50 border border-slate-700 rounded-lg outline-none"
+                                    min="1"
                                 />
                             </div>
 
@@ -500,6 +542,7 @@ function AdminPanel({ onLogout }) {
                                     value={settings.referralBonus}
                                     onChange={(e) => setSettings({...settings, referralBonus: e.target.value})}
                                     className="w-full px-4 py-3 bg-slate-950/50 border border-slate-700 rounded-lg outline-none"
+                                    min="0"
                                 />
                             </div>
 
@@ -510,7 +553,12 @@ function AdminPanel({ onLogout }) {
                                     value={settings.welcomeBonus}
                                     onChange={(e) => setSettings({...settings, welcomeBonus: e.target.value})}
                                     className="w-full px-4 py-3 bg-slate-950/50 border border-slate-700 rounded-lg outline-none"
+                                    min="0"
                                 />
+                            </div>
+
+                            <div className="bg-blue-500/10 border border-blue-500/30 rounded-lg p-3 text-sm text-blue-400">
+                                💡 These settings affect all new signups and referrals
                             </div>
                         </div>
 
@@ -522,6 +570,10 @@ function AdminPanel({ onLogout }) {
                 </div>
             )}
 
+            {/* Other modals remain the same... */}
+            {/* Add Coins, Deduct Coins, Bulk Coins, Send Notification, User Details modals */}
+            {/* Copy from original code */}
+            
             {/* Add Coins Modal */}
             {showAddCoins && (
                 <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50" onClick={() => setShowAddCoins(false)}>
@@ -551,6 +603,7 @@ function AdminPanel({ onLogout }) {
                                     onChange={(e) => setCoinAmount(e.target.value)}
                                     placeholder="Enter amount"
                                     className="w-full px-4 py-3 bg-slate-950/50 border border-slate-700 rounded-lg outline-none"
+                                    min="1"
                                 />
                             </div>
                         </div>
@@ -588,6 +641,8 @@ function AdminPanel({ onLogout }) {
                                     onChange={(e) => setCoinAmount(e.target.value)}
                                     placeholder="Enter amount to deduct"
                                     className="w-full px-4 py-3 bg-slate-950/50 border border-slate-700 rounded-lg outline-none"
+                                    min="1"
+                                    max={selectedUser?.balance || 0}
                                 />
                             </div>
 
@@ -630,6 +685,7 @@ function AdminPanel({ onLogout }) {
                                     onChange={(e) => setBulkCoinAmount(e.target.value)}
                                     placeholder="Enter amount"
                                     className="w-full px-4 py-3 bg-slate-950/50 border border-slate-700 rounded-lg outline-none"
+                                    min="1"
                                 />
                             </div>
 
