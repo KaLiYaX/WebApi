@@ -5,7 +5,12 @@
   "main": "index.html",
   "scripts": {
     "start": "live-server --port=3000",
-    "dev": "live-server --port=3000"
+    "dev": "live-server --port=3000",
+    "serve": "firebase emulators:start --only functions",
+    "deploy": "firebase deploy",
+    "deploy:hosting": "firebase deploy --only hosting",
+    "deploy:functions": "firebase deploy --only functions",
+    "logs": "firebase functions:log"
   },
   "keywords": [
     "api",
@@ -18,10 +23,17 @@
   "license": "MIT",
   "dependencies": {
     "firebase": "^10.7.1",
+    "firebase-admin": "^11.8.0",
+    "firebase-functions": "^4.3.1",
+    "nodemailer": "^6.9.7",
     "react": "^18.2.0",
     "react-dom": "^18.2.0"
   },
   "devDependencies": {
-    "live-server": "^1.2.2"
+    "live-server": "^1.2.2",
+    "firebase-functions-test": "^3.1.0"
+  },
+  "engines": {
+    "node": "18"
   }
 }
