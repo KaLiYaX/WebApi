@@ -1,4 +1,5 @@
 // FILE: src/App.jsx
+// Main Application Component
 
 const { useState, useEffect } = React;
 
@@ -18,9 +19,9 @@ function App() {
     if (loading) {
         return (
             <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 flex items-center justify-center">
-                <div className="text-white">
+                <div className="text-white text-center">
                     <div className="w-16 h-16 border-4 border-purple-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-                    <p className="text-xl">Loading...</p>
+                    <p className="text-xl font-semibold">Loading KaliyaX API...</p>
                 </div>
             </div>
         );
