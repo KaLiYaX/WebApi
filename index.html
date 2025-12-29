@@ -29,10 +29,14 @@
     <div id="toast-root"></div>
     <div id="dialog-root"></div>
     
-    <!-- Load scripts in order -->
+    <!-- Load scripts in CORRECT order -->
     <script type="text/babel" src="./src/config/firebase.js"></script>
+    
+    <!-- Toast and Dialog components FIRST -->
     <script type="text/babel" src="./src/ToastNotification.jsx"></script>
     <script type="text/babel" src="./src/ConfirmDialog.jsx"></script>
+    
+    <!-- Then other components -->
     <script type="text/babel" src="./src/Footer.jsx"></script>
     <script type="text/babel" src="./src/NotificationBar.jsx"></script>
     <script type="text/babel" src="./src/TransactionsTab.jsx"></script>
@@ -43,7 +47,7 @@
     <script type="text/babel" src="./src/AuthPage.jsx"></script>
     <script type="text/babel" src="./src/App.jsx"></script>
     
-    <!-- Initialize Toast and Dialog -->
+    <!-- Initialize Toast and Dialog AFTER components loaded -->
     <script type="text/babel">
         const toastRoot = ReactDOM.createRoot(document.getElementById('toast-root'));
         toastRoot.render(<ToastNotification />);
