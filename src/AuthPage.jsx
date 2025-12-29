@@ -1,5 +1,5 @@
 // FILE: src/AuthPage.jsx
-// Authentication Page Component
+// Authentication Page Component - Fixed Referral Bonus
 
 function AuthPage() {
     const [isLogin, setIsLogin] = useState(true);
@@ -16,6 +16,7 @@ function AuthPage() {
         const ref = urlParams.get('ref');
         if (ref) {
             setReferralCode(ref);
+            setIsLogin(false); // Auto switch to signup
         }
     }, []);
 
@@ -79,55 +80,87 @@ function AuthPage() {
         setLoading(true);
 
         try {
+            // Load system settings first
+            const settingsDoc = await window.firebaseDB.collection('settings').doc('system').get();
+            let welcomeBonus = 100;
+            let referralBonusAmount = 60;
+
+            if (settingsDoc.exists) {
+                const settings = settingsDoc.data();
+                welcomeBonus = settings.welcomeBonus || 100;
+                referralBonusAmount = settings.referralBonus || 60;
+            }
+
+            // Create user account
             const userCredential = await window.firebaseAuth.createUserWithEmailAndPassword(email, password);
             const user = userCredential.user;
 
+            // Generate API Key
             const apiKey = 'kx_live_' + Math.random().toString(36).substring(2, 15) + 
                           Math.random().toString(36).substring(2, 15);
 
             const userName = name || email.split('@')[0];
             const profilePicture = generateProfilePicture(userName);
+            const userReferralCode = user.uid.substring(0, 8).toUpperCase();
 
-            let totalBonus = 100;
+            let totalBonus = welcomeBonus;
             let referrerId = null;
 
-            if (referralCode) {
-                const referrerQuery = await window.firebaseDB.collection('users')
-                    .where('referralCode', '==', referralCode)
-                    .limit(1)
-                    .get();
+            // Handle Referral Bonus
+            if (referralCode && referralCode.trim() !== '') {
+                try {
+                    console.log('Checking referral code:', referralCode);
+                    
+                    const referrerQuery = await window.firebaseDB.collection('users')
+                        .where('referralCode', '==', referralCode.trim())
+                        .limit(1)
+                        .get();
 
-                if (!referrerQuery.empty) {
-                    referrerId = referrerQuery.docs[0].id;
-                    const referralBonus = 60;
-                    totalBonus += referralBonus;
+                    if (!referrerQuery.empty) {
+                        const referrerDoc = referrerQuery.docs[0];
+                        referrerId = referrerDoc.id;
+                        
+                        console.log('Referrer found:', referrerId);
 
-                    await window.firebaseDB.collection('users').doc(referrerId).update({
-                        balance: firebase.firestore.FieldValue.increment(referralBonus)
-                    });
+                        // Add referral bonus to NEW USER
+                        totalBonus += referralBonusAmount;
 
-                    await window.firebaseDB.collection('users').doc(referrerId).collection('transactions').add({
-                        type: 'referral',
-                        amount: referralBonus,
-                        from: email,
-                        description: `Referral bonus from ${email}`,
-                        timestamp: firebase.firestore.FieldValue.serverTimestamp()
-                    });
+                        // Add referral bonus to REFERRER
+                        await window.firebaseDB.collection('users').doc(referrerId).update({
+                            balance: firebase.firestore.FieldValue.increment(referralBonusAmount)
+                        });
 
-                    await window.firebaseDB.collection('users').doc(referrerId).collection('notifications').add({
-                        type: 'coin_reward',
-                        title: 'Referral Bonus',
-                        message: `You earned ${referralBonus} coins for referring ${email}`,
-                        amount: 0,
-                        claimed: true,
-                        read: false,
-                        timestamp: firebase.firestore.FieldValue.serverTimestamp()
-                    });
+                        // Add transaction for REFERRER
+                        await window.firebaseDB.collection('users').doc(referrerId).collection('transactions').add({
+                            type: 'referral',
+                            amount: referralBonusAmount,
+                            from: email,
+                            description: `Referral bonus from ${email}`,
+                            timestamp: firebase.firestore.FieldValue.serverTimestamp()
+                        });
+
+                        // Add notification for REFERRER
+                        await window.firebaseDB.collection('users').doc(referrerId).collection('notifications').add({
+                            type: 'coin_reward',
+                            title: '🎉 Referral Bonus Earned!',
+                            message: `You earned ${referralBonusAmount} coins for referring ${email}`,
+                            amount: 0, // Already added directly to balance
+                            claimed: true,
+                            read: false,
+                            timestamp: firebase.firestore.FieldValue.serverTimestamp()
+                        });
+
+                        console.log('Referral bonus added successfully');
+                    } else {
+                        console.log('Invalid referral code - no user found');
+                    }
+                } catch (refError) {
+                    console.error('Error processing referral:', refError);
+                    // Continue signup even if referral fails
                 }
             }
 
-            const userReferralCode = user.uid.substring(0, 8).toUpperCase();
-
+            // Create user document
             await window.firebaseDB.collection('users').doc(user.uid).set({
                 name: userName,
                 email: email,
@@ -144,22 +177,29 @@ function AuthPage() {
                 emailVerified: true
             });
 
+            // Add signup transaction
             await window.firebaseDB.collection('users').doc(user.uid).collection('transactions').add({
                 type: 'signup_bonus',
                 amount: totalBonus,
-                description: referrerId ? 'Welcome bonus + Referral bonus' : 'Welcome bonus',
+                description: referrerId 
+                    ? `Welcome bonus (${welcomeBonus}) + Referral bonus (${referralBonusAmount})` 
+                    : `Welcome bonus (${welcomeBonus})`,
                 timestamp: firebase.firestore.FieldValue.serverTimestamp()
             });
 
+            // Add welcome notification
             await window.firebaseDB.collection('users').doc(user.uid).collection('notifications').add({
                 type: 'announcement',
-                title: 'Welcome to KaliyaX API',
-                message: `Your account has been created successfully. You received ${totalBonus} coins as bonus`,
+                title: '🎉 Welcome to KaliyaX API!',
+                message: `Your account has been created successfully. You received ${totalBonus} coins as bonus${referrerId ? ' (including referral bonus!)' : ''}`,
                 read: false,
                 timestamp: firebase.firestore.FieldValue.serverTimestamp()
             });
 
+            console.log('Signup successful! Total bonus:', totalBonus);
+
         } catch (err) {
+            console.error('Signup error:', err);
             if (err.code === 'auth/email-already-in-use') {
                 setError('Email already in use');
             } else {
@@ -244,8 +284,11 @@ function AuthPage() {
                                     />
                                     {referralCode && (
                                         <div className="p-3 bg-green-500/10 border border-green-500/30 rounded-lg">
-                                            <p className="text-green-400 text-sm">
-                                                Referral code applied! You'll get extra bonus coins
+                                            <p className="text-green-400 text-sm font-semibold">
+                                                🎉 Referral code applied! You'll get extra bonus coins
+                                            </p>
+                                            <p className="text-green-300 text-xs mt-1">
+                                                Code: {referralCode}
                                             </p>
                                         </div>
                                     )}
