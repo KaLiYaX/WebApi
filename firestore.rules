@@ -1,44 +1,44 @@
-// FILE: firestore.rules
-// Firestore Security Rules
-
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     
-    // Users collection
+    // Users collection - Full access for authenticated users
     match /users/{userId} {
-      allow read, write: if request.auth != null && request.auth.uid == userId;
-      allow get: if request.auth != null;
-      allow list: if request.auth != null;
+      allow read: if request.auth != null;
+      allow write: if request.auth != null && request.auth.uid == userId;
+      allow create: if request.auth != null;
       
       // Transactions subcollection
       match /transactions/{transactionId} {
-        allow read, create: if request.auth != null && request.auth.uid == userId;
+        allow read: if request.auth != null && request.auth.uid == userId;
+        allow create: if request.auth != null && request.auth.uid == userId;
         allow update, delete: if false;
       }
       
       // Notifications subcollection
       match /notifications/{notificationId} {
-        allow read, update, delete: if request.auth != null && request.auth.uid == userId;
+        allow read: if request.auth != null && request.auth.uid == userId;
         allow create: if request.auth != null;
+        allow update: if request.auth != null && request.auth.uid == userId;
+        allow delete: if request.auth != null && request.auth.uid == userId;
       }
     }
     
     // API calls logging
     match /api_calls/{callId} {
       allow create: if request.auth != null;
-      allow read: if request.auth != null && resource.data.userId == request.auth.uid;
-    }
-    
-    // System settings
-    match /settings/{document} {
       allow read: if request.auth != null;
-      allow write: if request.auth != null;
     }
     
-    // Verification codes
+    // System settings - Anyone can read, anyone can write
+    match /settings/{document} {
+      allow read: if true;
+      allow write: if true;
+    }
+    
+    // Verification codes - Anyone can read/write
     match /verification_codes/{email} {
-      allow read, write: if request.auth != null;
+      allow read, write: if true;
     }
   }
 }
