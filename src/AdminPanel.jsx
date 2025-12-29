@@ -1,5 +1,4 @@
-// FILE: src/AdminPanel.jsx (Part 1/3)
-// Admin Panel Component - Main Logic
+
 
 function AdminPanel({ onLogout }) {
     const [users, setUsers] = useState([]);
@@ -331,9 +330,6 @@ function AdminPanel({ onLogout }) {
         );
     }
 
-// FILE: src/AdminPanel.jsx (Part 2/3)
-// Admin Panel Component - Main UI Render
-// Note: This continues from Part 1
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 text-white">
@@ -478,11 +474,7 @@ function AdminPanel({ onLogout }) {
                 </div>
             </div>
 
-            {/* Continue to Part 3 for Modals... */}
-
-            // FILE: src/AdminPanel.jsx (Part 3/3 - Final)
-// Admin Panel Component - Modals
-// Note: This continues from Part 2
+        
 
             {/* Settings Modal */}
             {showSettings && (
