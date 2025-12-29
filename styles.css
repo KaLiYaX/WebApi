@@ -1,3 +1,4 @@
+/* FILE: styles.css */
 /* KaliyaX API Portal - Custom Styles */
 
 /* Root Variables */
@@ -210,28 +211,6 @@ body {
     animation: fadeIn 0.2s ease-out;
 }
 
-/* Toast Notification */
-.toast {
-    position: fixed;
-    bottom: 2rem;
-    right: 2rem;
-    padding: 1rem 1.5rem;
-    border-radius: 0.5rem;
-    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.5);
-    animation: slideIn 0.3s ease-out;
-    z-index: 100;
-}
-
-.toast-success {
-    background: rgba(34, 197, 94, 0.9);
-    border: 1px solid #22c55e;
-}
-
-.toast-error {
-    background: rgba(239, 68, 68, 0.9);
-    border: 1px solid #ef4444;
-}
-
 /* Code Block */
 code {
     font-family: 'Courier New', Courier, monospace;
@@ -287,6 +266,11 @@ select:disabled {
 ::selection {
     background: var(--primary);
     color: white;
+}
+
+/* Smooth Transitions */
+a, button, input, textarea {
+    transition: var(--transition);
 }
 
 /* Print Styles */
