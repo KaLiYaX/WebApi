@@ -1,3 +1,7 @@
+// FILE: src/AuthPage.jsx - WITH OAUTH & EMAIL VERIFICATION
+
+const { useState, useEffect } = React;
+
 function AuthPage() {
     const [isLogin, setIsLogin] = useState(true);
     const [email, setEmail] = useState('');
@@ -7,6 +11,8 @@ function AuthPage() {
     const [referralCode, setReferralCode] = useState('');
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
+    const [showVerification, setShowVerification] = useState(false);
+    const [pendingEmail, setPendingEmail] = useState('');
 
     useEffect(() => {
         const urlParams = new URLSearchParams(window.location.search);
@@ -41,11 +47,20 @@ function AuthPage() {
             const user = userCredential.user;
 
             const userDoc = await window.firebaseDB.collection('users').doc(user.uid).get();
-            if (userDoc.exists && userDoc.data().status === 'suspended') {
-                await window.firebaseAuth.signOut();
-                setError('Your account has been suspended. Contact support.');
-                setLoading(false);
-                return;
+            if (userDoc.exists) {
+                if (userDoc.data().status === 'suspended') {
+                    await window.firebaseAuth.signOut();
+                    setError('Your account has been suspended. Contact support.');
+                    setLoading(false);
+                    return;
+                }
+                
+                if (!userDoc.data().emailVerified) {
+                    setError('Please verify your email first');
+                    await window.firebaseAuth.signOut();
+                    setLoading(false);
+                    return;
+                }
             }
         } catch (err) {
             if (err.code === 'auth/user-not-found') {
@@ -77,6 +92,24 @@ function AuthPage() {
         setLoading(true);
 
         try {
+            // Send verification email FIRST
+            const sendEmailFunction = firebase.functions().httpsCallable('sendVerificationEmail');
+            await sendEmailFunction({ email, type: 'signup' });
+            
+            // Show verification page
+            setPendingEmail(email);
+            setShowVerification(true);
+        } catch (err) {
+            console.error('Signup error:', err);
+            setError('Failed to send verification email. Please try again.');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleVerificationSuccess = async () => {
+        setLoading(true);
+        try {
             let welcomeBonus = 100;
             let referralBonusAmount = 60;
 
@@ -91,13 +124,14 @@ function AuthPage() {
                 console.warn('Could not load settings, using defaults:', settingsError);
             }
 
-            const userCredential = await window.firebaseAuth.createUserWithEmailAndPassword(email, password);
+            // NOW create Firebase account
+            const userCredential = await window.firebaseAuth.createUserWithEmailAndPassword(pendingEmail, password);
             const user = userCredential.user;
 
             const apiKey = 'kx_live_' + Math.random().toString(36).substring(2, 15) + 
                           Math.random().toString(36).substring(2, 15);
 
-            const userName = name || email.split('@')[0];
+            const userName = name || pendingEmail.split('@')[0];
             const profilePicture = generateProfilePicture(userName);
             const userReferralCode = user.uid.substring(0, 8).toUpperCase();
 
@@ -106,8 +140,6 @@ function AuthPage() {
 
             if (referralCode && referralCode.trim() !== '') {
                 try {
-                    console.log('🔍 Checking referral code:', referralCode);
-                    
                     const referrerQuery = await window.firebaseDB.collection('users')
                         .where('referralCode', '==', referralCode.trim())
                         .limit(1)
@@ -117,8 +149,6 @@ function AuthPage() {
                         const referrerDoc = referrerQuery.docs[0];
                         referrerId = referrerDoc.id;
                         
-                        console.log('✅ Referrer found:', referrerId);
-
                         totalBonus += referralBonusAmount;
 
                         await window.firebaseDB.collection('users').doc(referrerId).update({
@@ -128,33 +158,29 @@ function AuthPage() {
                         await window.firebaseDB.collection('users').doc(referrerId).collection('transactions').add({
                             type: 'referral',
                             amount: referralBonusAmount,
-                            from: email,
-                            description: `Referral bonus from ${email}`,
+                            from: pendingEmail,
+                            description: `Referral bonus from ${pendingEmail}`,
                             timestamp: firebase.firestore.FieldValue.serverTimestamp()
                         });
 
                         await window.firebaseDB.collection('users').doc(referrerId).collection('notifications').add({
                             type: 'announcement',
                             title: '🎉 Referral Bonus Earned!',
-                            message: `You earned ${referralBonusAmount} coins for referring ${email}. The coins have been added to your balance!`,
+                            message: `You earned ${referralBonusAmount} coins for referring ${pendingEmail}. The coins have been added to your balance!`,
                             amount: 0,
                             claimed: true,
                             read: false,
                             timestamp: firebase.firestore.FieldValue.serverTimestamp()
                         });
-
-                        console.log('✅ Referral bonus processed successfully');
-                    } else {
-                        console.log('❌ Invalid referral code - no user found');
                     }
                 } catch (refError) {
-                    console.error('❌ Referral error:', refError);
+                    console.error('Referral error:', refError);
                 }
             }
 
             await window.firebaseDB.collection('users').doc(user.uid).set({
                 name: userName,
-                email: email,
+                email: pendingEmail,
                 apiKey: apiKey,
                 balance: totalBonus,
                 profilePicture: profilePicture,
@@ -185,12 +211,150 @@ function AuthPage() {
                 timestamp: firebase.firestore.FieldValue.serverTimestamp()
             });
 
-            console.log('✅ Signup successful! Total bonus:', totalBonus);
-
+            // Success!
+            alert('✅ Account created successfully!');
         } catch (err) {
-            console.error('❌ Signup error:', err);
-            if (err.code === 'auth/email-already-in-use') {
-                setError('Email already in use');
+            console.error('Account creation error:', err);
+            setError('Failed to create account. Please try again.');
+            setShowVerification(false);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleOAuthLogin = async (provider) => {
+        setError('');
+        setLoading(true);
+
+        try {
+            let authProvider;
+            if (provider === 'google') {
+                authProvider = new firebase.auth.GoogleAuthProvider();
+            } else if (provider === 'github') {
+                authProvider = new firebase.auth.GithubAuthProvider();
+            }
+
+            const result = await window.firebaseAuth.signInWithPopup(authProvider);
+            const user = result.user;
+
+            // Check if user exists
+            const userDoc = await window.firebaseDB.collection('users').doc(user.uid).get();
+
+            if (!userDoc.exists) {
+                // New user - create account
+                let welcomeBonus = 100;
+                let referralBonusAmount = 60;
+
+                try {
+                    const settingsDoc = await window.firebaseDB.collection('settings').doc('system').get();
+                    if (settingsDoc.exists) {
+                        const settings = settingsDoc.data();
+                        welcomeBonus = settings.welcomeBonus || 100;
+                        referralBonusAmount = settings.referralBonus || 60;
+                    }
+                } catch (settingsError) {
+                    console.warn('Could not load settings, using defaults');
+                }
+
+                const apiKey = 'kx_live_' + Math.random().toString(36).substring(2, 15) + 
+                              Math.random().toString(36).substring(2, 15);
+
+                const userName = user.displayName || user.email.split('@')[0];
+                const profilePicture = user.photoURL || generateProfilePicture(userName);
+                const userReferralCode = user.uid.substring(0, 8).toUpperCase();
+
+                let totalBonus = welcomeBonus;
+                let referrerId = null;
+
+                // Check referral code
+                if (referralCode && referralCode.trim() !== '') {
+                    try {
+                        const referrerQuery = await window.firebaseDB.collection('users')
+                            .where('referralCode', '==', referralCode.trim())
+                            .limit(1)
+                            .get();
+
+                        if (!referrerQuery.empty) {
+                            const referrerDoc = referrerQuery.docs[0];
+                            referrerId = referrerDoc.id;
+                            
+                            totalBonus += referralBonusAmount;
+
+                            await window.firebaseDB.collection('users').doc(referrerId).update({
+                                balance: firebase.firestore.FieldValue.increment(referralBonusAmount)
+                            });
+
+                            await window.firebaseDB.collection('users').doc(referrerId).collection('transactions').add({
+                                type: 'referral',
+                                amount: referralBonusAmount,
+                                from: user.email,
+                                description: `Referral bonus from ${user.email}`,
+                                timestamp: firebase.firestore.FieldValue.serverTimestamp()
+                            });
+
+                            await window.firebaseDB.collection('users').doc(referrerId).collection('notifications').add({
+                                type: 'announcement',
+                                title: '🎉 Referral Bonus Earned!',
+                                message: `You earned ${referralBonusAmount} coins for referring ${user.email}!`,
+                                amount: 0,
+                                claimed: true,
+                                read: false,
+                                timestamp: firebase.firestore.FieldValue.serverTimestamp()
+                            });
+                        }
+                    } catch (refError) {
+                        console.error('Referral error:', refError);
+                    }
+                }
+
+                await window.firebaseDB.collection('users').doc(user.uid).set({
+                    name: userName,
+                    email: user.email,
+                    apiKey: apiKey,
+                    balance: totalBonus,
+                    profilePicture: profilePicture,
+                    bio: '',
+                    referralCode: userReferralCode,
+                    referredBy: referrerId,
+                    apiKeyPaused: false,
+                    createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+                    totalCalls: 0,
+                    status: 'active',
+                    emailVerified: true,
+                    oauthProvider: provider
+                });
+
+                await window.firebaseDB.collection('users').doc(user.uid).collection('transactions').add({
+                    type: 'signup_bonus',
+                    amount: totalBonus,
+                    description: referrerId 
+                        ? `Welcome bonus (${welcomeBonus}) + Referral bonus (${referralBonusAmount})` 
+                        : `Welcome bonus (${welcomeBonus})`,
+                    timestamp: firebase.firestore.FieldValue.serverTimestamp()
+                });
+
+                await window.firebaseDB.collection('users').doc(user.uid).collection('notifications').add({
+                    type: 'announcement',
+                    title: '🎉 Welcome to KaliyaX API!',
+                    message: `Your account has been created successfully with ${provider}. You received ${totalBonus} coins!`,
+                    read: false,
+                    timestamp: firebase.firestore.FieldValue.serverTimestamp()
+                });
+            } else {
+                // Existing user
+                if (userDoc.data().status === 'suspended') {
+                    await window.firebaseAuth.signOut();
+                    setError('Your account has been suspended');
+                    setLoading(false);
+                    return;
+                }
+            }
+        } catch (err) {
+            console.error('OAuth error:', err);
+            if (err.code === 'auth/popup-closed-by-user') {
+                setError('Sign-in cancelled');
+            } else if (err.code === 'auth/account-exists-with-different-credential') {
+                setError('An account already exists with this email');
             } else {
                 setError(err.message);
             }
@@ -198,6 +362,20 @@ function AuthPage() {
             setLoading(false);
         }
     };
+
+    if (showVerification) {
+        return (
+            <EmailVerification 
+                email={pendingEmail}
+                type="signup"
+                onVerified={handleVerificationSuccess}
+                onBack={() => {
+                    setShowVerification(false);
+                    setPendingEmail('');
+                }}
+            />
+        );
+    }
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 text-white">
@@ -274,7 +452,7 @@ function AuthPage() {
                                     {referralCode && (
                                         <div className="p-3 bg-green-500/10 border border-green-500/30 rounded-lg">
                                             <p className="text-green-400 text-sm font-semibold">
-                                                🎉 Referral code applied! You'll get extra {60} bonus coins
+                                                🎉 Referral code applied! You'll get extra 60 bonus coins
                                             </p>
                                             <p className="text-green-300 text-xs mt-1">
                                                 Code: {referralCode}
@@ -298,6 +476,39 @@ function AuthPage() {
                                 )}
                             </button>
                         </form>
+
+                        <div className="my-6 flex items-center">
+                            <div className="flex-1 border-t border-slate-700"></div>
+                            <span className="px-4 text-slate-400 text-sm">Or continue with</span>
+                            <div className="flex-1 border-t border-slate-700"></div>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-3">
+                            <button 
+                                onClick={() => handleOAuthLogin('google')}
+                                disabled={loading}
+                                className="py-3 bg-slate-800 hover:bg-slate-700 rounded-lg font-semibold transition-all disabled:opacity-50 flex items-center justify-center space-x-2 border border-slate-700"
+                            >
+                                <svg className="w-5 h-5" viewBox="0 0 24 24">
+                                    <path fill="#EA4335" d="M5.27 9.76A7.5 7.5 0 0 1 19.5 12h-7.02v3h4.52a3.99 3.99 0 0 1-6 2.24v2.76h2.76A7.48 7.48 0 0 0 19.5 12c0-.58-.05-1.14-.14-1.68H12.48v3.44z"/>
+                                    <path fill="#4285F4" d="M12 20a7.48 7.48 0 0 0 5.26-1.93l-2.56-1.99A4.73 4.73 0 0 1 7.5 12H4.53v2.58A7.5 7.5 0 0 0 12 20z"/>
+                                    <path fill="#FBBC05" d="M7.5 12a4.5 4.5 0 0 1 0-2.92V6.5H4.53a7.5 7.5 0 0 0 0 7.08z"/>
+                                    <path fill="#34A853" d="M12 7.5c1.16 0 2.19.4 3.01 1.18l2.26-2.26A7.5 7.5 0 0 0 4.53 9.08L7.5 11.5A4.48 4.48 0 0 1 12 7.5z"/>
+                                </svg>
+                                <span>Google</span>
+                            </button>
+
+                            <button 
+                                onClick={() => handleOAuthLogin('github')}
+                                disabled={loading}
+                                className="py-3 bg-slate-800 hover:bg-slate-700 rounded-lg font-semibold transition-all disabled:opacity-50 flex items-center justify-center space-x-2 border border-slate-700"
+                            >
+                                <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                                    <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/>
+                                </svg>
+                                <span>GitHub</span>
+                            </button>
+                        </div>
 
                         <div className="mt-6 text-center text-slate-400">
                             {isLogin ? (
