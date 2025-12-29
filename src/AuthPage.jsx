@@ -1,308 +1,277 @@
-function AuthPage() {
-    const [isLogin, setIsLogin] = useState(true);
-    const [email, setEmail] = useState('');
-    const [password, setPassword] = useState('');
-    const [confirmPassword, setConfirmPassword] = useState('');
-    const [name, setName] = useState('');
-    const [referralCode, setReferralCode] = useState('');
-    const [error, setError] = useState('');
-    const [loading, setLoading] = useState(false);
+// FILE: src/NotificationBar.jsx
+// Notification Bar Component - Updated with Coin Claim
+
+function NotificationBar({ user }) {
+    const [notifications, setNotifications] = useState([]);
+    const [showNotifications, setShowNotifications] = useState(false);
+    const [unreadCount, setUnreadCount] = useState(0);
 
     useEffect(() => {
-        const urlParams = new URLSearchParams(window.location.search);
-        const ref = urlParams.get('ref');
-        if (ref) {
-            setReferralCode(ref);
-            setIsLogin(false);
-        }
-    }, []);
+        if (user) {
+            loadNotifications();
+            
+            const unsubscribe = window.firebaseDB
+                .collection('users')
+                .doc(user.uid)
+                .collection('notifications')
+                .orderBy('timestamp', 'desc')
+                .limit(20)
+                .onSnapshot((snapshot) => {
+                    const notifs = snapshot.docs.map(doc => ({
+                        id: doc.id,
+                        ...doc.data(),
+                        timestamp: doc.data().timestamp?.toDate()
+                    }));
+                    setNotifications(notifs);
+                    
+                    const unread = notifs.filter(n => !n.read).length;
+                    setUnreadCount(unread);
+                });
 
-    const generateProfilePicture = (userName) => {
-        const initials = userName.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
-        const colors = ['#667eea', '#764ba2', '#f093fb', '#4facfe', '#43e97b', '#fa709a'];
-        const color = colors[Math.floor(Math.random() * colors.length)];
-        
-        return `data:image/svg+xml,${encodeURIComponent(`
-            <svg width="200" height="200" xmlns="http://www.w3.org/2000/svg">
-                <rect width="200" height="200" fill="${color}"/>
-                <text x="50%" y="50%" font-size="80" font-family="Arial" font-weight="bold" 
-                      fill="white" text-anchor="middle" dy=".35em">${initials}</text>
-            </svg>
-        `)}`;
+            return () => unsubscribe();
+        }
+    }, [user]);
+
+    const loadNotifications = async () => {
+        try {
+            const snapshot = await window.firebaseDB
+                .collection('users')
+                .doc(user.uid)
+                .collection('notifications')
+                .orderBy('timestamp', 'desc')
+                .limit(20)
+                .get();
+
+            const notifs = snapshot.docs.map(doc => ({
+                id: doc.id,
+                ...doc.data(),
+                timestamp: doc.data().timestamp?.toDate()
+            }));
+
+            setNotifications(notifs);
+            const unread = notifs.filter(n => !n.read).length;
+            setUnreadCount(unread);
+        } catch (error) {
+            console.error('Error loading notifications:', error);
+        }
     };
 
-    const handleLogin = async (e) => {
-        e.preventDefault();
-        setError('');
-        setLoading(true);
-
+    const markAsRead = async (notificationId) => {
         try {
-            const userCredential = await window.firebaseAuth.signInWithEmailAndPassword(email, password);
-            const user = userCredential.user;
-
-            const userDoc = await window.firebaseDB.collection('users').doc(user.uid).get();
-            if (userDoc.exists && userDoc.data().status === 'suspended') {
-                await window.firebaseAuth.signOut();
-                setError('Your account has been suspended. Contact support.');
-                setLoading(false);
-                return;
-            }
-        } catch (err) {
-            if (err.code === 'auth/user-not-found') {
-                setError('No account found with this email');
-            } else if (err.code === 'auth/wrong-password') {
-                setError('Incorrect password');
-            } else {
-                setError(err.message);
-            }
-        } finally {
-            setLoading(false);
+            await window.firebaseDB
+                .collection('users')
+                .doc(user.uid)
+                .collection('notifications')
+                .doc(notificationId)
+                .update({ read: true });
+        } catch (error) {
+            console.error('Error marking as read:', error);
         }
     };
 
-    const handleSignup = async (e) => {
-        e.preventDefault();
-        setError('');
-
-        if (password !== confirmPassword) {
-            setError('Passwords do not match');
-            return;
-        }
-
-        if (password.length < 6) {
-            setError('Password must be at least 6 characters');
-            return;
-        }
-
-        setLoading(true);
+    const claimCoins = async (notification) => {
+        if (notification.claimed) return;
 
         try {
-            let welcomeBonus = 100;
-            let referralBonusAmount = 60;
-
-            try {
-                const settingsDoc = await window.firebaseDB.collection('settings').doc('system').get();
-                if (settingsDoc.exists) {
-                    const settings = settingsDoc.data();
-                    welcomeBonus = settings.welcomeBonus || 100;
-                    referralBonusAmount = settings.referralBonus || 60;
-                }
-            } catch (settingsError) {
-                console.warn('Could not load settings, using defaults:', settingsError);
-            }
-
-            const userCredential = await window.firebaseAuth.createUserWithEmailAndPassword(email, password);
-            const user = userCredential.user;
-
-            const apiKey = 'kx_live_' + Math.random().toString(36).substring(2, 15) + 
-                          Math.random().toString(36).substring(2, 15);
-
-            const userName = name || email.split('@')[0];
-            const profilePicture = generateProfilePicture(userName);
-            const userReferralCode = user.uid.substring(0, 8).toUpperCase();
-
-            let totalBonus = welcomeBonus;
-            let referrerId = null;
-
-            if (referralCode && referralCode.trim() !== '') {
-                try {
-                    const referrerQuery = await window.firebaseDB.collection('users')
-                        .where('referralCode', '==', referralCode.trim())
-                        .limit(1)
-                        .get();
-
-                    if (!referrerQuery.empty) {
-                        const referrerDoc = referrerQuery.docs[0];
-                        referrerId = referrerDoc.id;
-                        
-                        totalBonus += referralBonusAmount;
-
-                        await window.firebaseDB.collection('users').doc(referrerId).update({
-                            balance: firebase.firestore.FieldValue.increment(referralBonusAmount)
-                        });
-
-                        await window.firebaseDB.collection('users').doc(referrerId).collection('transactions').add({
-                            type: 'referral',
-                            amount: referralBonusAmount,
-                            from: email,
-                            description: `Referral bonus from ${email}`,
-                            timestamp: firebase.firestore.FieldValue.serverTimestamp()
-                        });
-
-                        await window.firebaseDB.collection('users').doc(referrerId).collection('notifications').add({
-                            type: 'coin_reward',
-                            title: '🎉 Referral Bonus Earned!',
-                            message: `You earned ${referralBonusAmount} coins for referring ${email}`,
-                            amount: 0,
-                            claimed: true,
-                            read: false,
-                            timestamp: firebase.firestore.FieldValue.serverTimestamp()
-                        });
-                    }
-                } catch (refError) {
-                    console.error('Referral error:', refError);
-                }
-            }
-
-            await window.firebaseDB.collection('users').doc(user.uid).set({
-                name: userName,
-                email: email,
-                apiKey: apiKey,
-                balance: totalBonus,
-                profilePicture: profilePicture,
-                bio: '',
-                referralCode: userReferralCode,
-                referredBy: referrerId,
-                apiKeyPaused: false,
-                createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-                totalCalls: 0,
-                status: 'active',
-                emailVerified: true
+            // Update user balance
+            await window.firebaseDB.collection('users').doc(user.uid).update({
+                balance: firebase.firestore.FieldValue.increment(notification.amount)
             });
 
+            // Add transaction
             await window.firebaseDB.collection('users').doc(user.uid).collection('transactions').add({
-                type: 'signup_bonus',
-                amount: totalBonus,
-                description: referrerId 
-                    ? `Welcome bonus (${welcomeBonus}) + Referral bonus (${referralBonusAmount})` 
-                    : `Welcome bonus (${welcomeBonus})`,
+                type: 'admin_credit',
+                amount: notification.amount,
+                description: 'Claimed coin reward from admin',
                 timestamp: firebase.firestore.FieldValue.serverTimestamp()
             });
 
-            await window.firebaseDB.collection('users').doc(user.uid).collection('notifications').add({
-                type: 'announcement',
-                title: '🎉 Welcome to KaliyaX API!',
-                message: `Your account has been created successfully. You received ${totalBonus} coins as bonus${referrerId ? ' (including referral bonus!)' : ''}`,
-                read: false,
-                timestamp: firebase.firestore.FieldValue.serverTimestamp()
-            });
+            // Mark as claimed
+            await window.firebaseDB
+                .collection('users')
+                .doc(user.uid)
+                .collection('notifications')
+                .doc(notification.id)
+                .update({ 
+                    claimed: true,
+                    read: true
+                });
 
-        } catch (err) {
-            console.error('Signup error:', err);
-            if (err.code === 'auth/email-already-in-use') {
-                setError('Email already in use');
-            } else {
-                setError(err.message);
-            }
-        } finally {
-            setLoading(false);
+            window.showToast(`Successfully claimed ${notification.amount} coins! 🎉`, 'success');
+        } catch (error) {
+            console.error('Error claiming coins:', error);
+            window.showToast('Failed to claim coins!', 'error');
         }
+    };
+
+    const deleteNotification = async (notificationId) => {
+        try {
+            await window.firebaseDB
+                .collection('users')
+                .doc(user.uid)
+                .collection('notifications')
+                .doc(notificationId)
+                .delete();
+                
+            window.showToast('Notification deleted', 'info');
+        } catch (error) {
+            console.error('Error deleting notification:', error);
+        }
+    };
+
+    const markAllAsRead = async () => {
+        try {
+            const batch = window.firebaseDB.batch();
+            const unreadNotifs = notifications.filter(n => !n.read);
+
+            unreadNotifs.forEach(notif => {
+                const ref = window.firebaseDB
+                    .collection('users')
+                    .doc(user.uid)
+                    .collection('notifications')
+                    .doc(notif.id);
+                batch.update(ref, { read: true });
+            });
+
+            await batch.commit();
+            window.showToast('All notifications marked as read', 'success');
+        } catch (error) {
+            console.error('Error marking all as read:', error);
+        }
+    };
+
+    const getNotificationIcon = (type) => {
+        switch(type) {
+            case 'coin_reward':
+                return '💰';
+            case 'announcement':
+                return '📢';
+            case 'warning':
+                return '⚠️';
+            case 'info':
+                return 'ℹ️';
+            default:
+                return '🔔';
+        }
+    };
+
+    const formatTime = (date) => {
+        if (!date) return 'Just now';
+        
+        const now = new Date();
+        const diff = now - date;
+        const minutes = Math.floor(diff / 60000);
+        const hours = Math.floor(diff / 3600000);
+        const days = Math.floor(diff / 86400000);
+
+        if (minutes < 1) return 'Just now';
+        if (minutes < 60) return `${minutes}m ago`;
+        if (hours < 24) return `${hours}h ago`;
+        if (days < 7) return `${days}d ago`;
+        
+        return date.toLocaleDateString();
     };
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 text-white">
-            <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiMyMTIxMjEiIGZpbGwtb3BhY2l0eT0iMC4xIj48cGF0aCBkPSJNMzYgMzBoLTJWMGgydjMwem0wIDMwdi0yaDJWNjBoLTJ6TTAgMzZoMzB2Mkgwdi0yem0zMCAwaDMwdjJIMzB2LTJ6Ij48L3BhdGg+PC9nPjwvZz48L3N2Zz4=')] opacity-20"></div>
-            
-            <nav className="relative z-10 border-b border-slate-800 bg-slate-950/50 backdrop-blur-xl">
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-                    <div className="flex items-center justify-between">
+        <div className="relative">
+            <button 
+                onClick={() => setShowNotifications(!showNotifications)}
+                className="relative p-2 hover:bg-slate-800 rounded-lg transition-colors"
+            >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+                </svg>
+                {unreadCount > 0 && (
+                    <span className="absolute top-0 right-0 w-5 h-5 bg-red-500 text-white text-xs rounded-full flex items-center justify-center font-bold">
+                        {unreadCount > 9 ? '9+' : unreadCount}
+                    </span>
+                )}
+            </button>
+
+            {showNotifications && (
+                <div className="absolute right-0 mt-2 w-96 bg-slate-900 border border-slate-800 rounded-xl shadow-2xl max-h-[500px] overflow-hidden z-50 animate-fade-in">
+                    <div className="p-4 border-b border-slate-800 flex items-center justify-between sticky top-0 bg-slate-900">
+                        <h3 className="font-bold text-lg">Notifications</h3>
                         <div className="flex items-center space-x-2">
-                            <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-pink-600 rounded-lg flex items-center justify-center font-bold text-xl">K</div>
-                            <span className="text-xl font-bold">KaliyaX API</span>
-                        </div>
-                        <a href="admin.html" className="text-slate-400 hover:text-white text-sm transition-colors">
-                            Admin Login
-                        </a>
-                    </div>
-                </div>
-            </nav>
-
-            <div className="relative z-10 flex items-center justify-center min-h-[calc(100vh-80px)] px-4 py-12">
-                <div className="w-full max-w-md">
-                    <div className="bg-slate-900/80 backdrop-blur-xl rounded-2xl border border-slate-800 p-8 shadow-2xl animate-fade-in">
-                        <div className="text-center mb-8">
-                            <h2 className="text-3xl font-bold mb-2">
-                                {isLogin ? 'Welcome Back' : 'Create Account'}
-                            </h2>
-                            <p className="text-slate-400">
-                                {isLogin ? 'Sign in to access your developer dashboard' : 'Join thousands of developers'}
-                            </p>
-                        </div>
-
-                        {error && (
-                            <div className="mb-4 p-3 bg-red-500/10 border border-red-500/30 rounded-lg text-red-400 text-sm">
-                                {error}
-                            </div>
-                        )}
-
-                        <form onSubmit={isLogin ? handleLogin : handleSignup} className="space-y-4">
-                            {!isLogin && (
-                                <input 
-                                    type="text" 
-                                    placeholder="Name (optional)" 
-                                    value={name}
-                                    onChange={(e) => setName(e.target.value)}
-                                    className="w-full px-4 py-3 bg-slate-800/50 border border-slate-700 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none text-white"
-                                />
-                            )}
-                            <input 
-                                type="email" 
-                                placeholder="Email" 
-                                value={email}
-                                onChange={(e) => setEmail(e.target.value)}
-                                required
-                                className="w-full px-4 py-3 bg-slate-800/50 border border-slate-700 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none text-white"
-                            />
-                            <input 
-                                type="password" 
-                                placeholder="Password" 
-                                value={password}
-                                onChange={(e) => setPassword(e.target.value)}
-                                required
-                                className="w-full px-4 py-3 bg-slate-800/50 border border-slate-700 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none text-white"
-                            />
-                            {!isLogin && (
-                                <>
-                                    <input 
-                                        type="password" 
-                                        placeholder="Confirm Password" 
-                                        value={confirmPassword}
-                                        onChange={(e) => setConfirmPassword(e.target.value)}
-                                        required
-                                        className="w-full px-4 py-3 bg-slate-800/50 border border-slate-700 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none text-white"
-                                    />
-                                    {referralCode && (
-                                        <div className="p-3 bg-green-500/10 border border-green-500/30 rounded-lg">
-                                            <p className="text-green-400 text-sm font-semibold">
-                                                🎉 Referral code applied! You'll get extra bonus coins
-                                            </p>
-                                            <p className="text-green-300 text-xs mt-1">
-                                                Code: {referralCode}
-                                            </p>
-                                        </div>
-                                    )}
-                                </>
+                            {unreadCount > 0 && (
+                                <button 
+                                    onClick={markAllAsRead}
+                                    className="text-xs text-blue-400 hover:text-blue-300"
+                                >
+                                    Mark all read
+                                </button>
                             )}
                             <button 
-                                type="submit"
-                                disabled={loading}
-                                className="w-full py-3 bg-gradient-to-r from-purple-600 to-pink-600 rounded-lg font-semibold hover:shadow-lg hover:shadow-purple-500/50 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
+                                onClick={() => setShowNotifications(false)}
+                                className="text-slate-400 hover:text-white"
                             >
-                                {loading ? (
-                                    <>
-                                        <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
-                                        <span>{isLogin ? 'Signing in...' : 'Creating account...'}</span>
-                                    </>
-                                ) : (
-                                    isLogin ? 'Log In' : 'Create Account'
-                                )}
+                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                </svg>
                             </button>
-                        </form>
-
-                        <div className="mt-6 text-center text-slate-400">
-                            {isLogin ? (
-                                <>
-                                    New here? <button onClick={() => setIsLogin(false)} className="text-purple-400 hover:text-purple-300 font-semibold">Create Account</button>
-                                </>
-                            ) : (
-                                <>
-                                    Already have an account? <button onClick={() => setIsLogin(true)} className="text-purple-400 hover:text-purple-300 font-semibold">Log In</button>
-                                </>
-                            )}
                         </div>
                     </div>
+
+                    <div className="overflow-y-auto max-h-[420px]">
+                        {notifications.length === 0 ? (
+                            <div className="p-8 text-center text-slate-400">
+                                <svg className="w-16 h-16 mx-auto mb-4 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
+                                </svg>
+                                <p>No notifications</p>
+                            </div>
+                        ) : (
+                            notifications.map((notif) => (
+                                <div 
+                                    key={notif.id}
+                                    className={`p-4 border-b border-slate-800 hover:bg-slate-800/30 transition-colors ${
+                                        !notif.read ? 'bg-blue-500/5' : ''
+                                    }`}
+                                    onClick={() => !notif.read && markAsRead(notif.id)}
+                                >
+                                    <div className="flex items-start space-x-3">
+                                        <div className="text-2xl">{getNotificationIcon(notif.type)}</div>
+                                        <div className="flex-1">
+                                            <div className="flex items-start justify-between">
+                                                <h4 className="font-semibold text-sm">{notif.title}</h4>
+                                                {!notif.read && (
+                                                    <div className="w-2 h-2 bg-blue-500 rounded-full mt-1"></div>
+                                                )}
+                                            </div>
+                                            <p className="text-slate-400 text-sm mt-1">{notif.message}</p>
+                                            
+                                            {notif.type === 'coin_reward' && !notif.claimed && notif.amount > 0 && (
+                                                <button 
+                                                    onClick={(e) => { e.stopPropagation(); claimCoins(notif); }}
+                                                    className="mt-3 px-4 py-2 bg-green-600 hover:bg-green-700 rounded-lg text-sm font-semibold transition-colors w-full"
+                                                >
+                                                    💰 Claim {notif.amount} Coins
+                                                </button>
+                                            )}
+                                            
+                                            {notif.type === 'coin_reward' && notif.claimed && (
+                                                <div className="mt-3 px-4 py-2 bg-green-500/10 border border-green-500/30 rounded-lg text-sm text-green-400 text-center">
+                                                    ✅ Claimed
+                                                </div>
+                                            )}
+                                            
+                                            <div className="flex items-center justify-between mt-2">
+                                                <span className="text-slate-500 text-xs">{formatTime(notif.timestamp)}</span>
+                                                <button 
+                                                    onClick={(e) => { e.stopPropagation(); deleteNotification(notif.id); }}
+                                                    className="text-slate-500 hover:text-red-400 text-xs"
+                                                >
+                                                    Delete
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            ))
+                        )}
+                    </div>
                 </div>
-            </div>
+            )}
         </div>
     );
 }
