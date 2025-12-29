@@ -2,13 +2,13 @@
 // Firebase Configuration
 
 const firebaseConfig = {
-    apiKey: "AIzaSyBYGqBQmI4y3bPzRI5MOgBQUW5Wdu4rbFM",
-    authDomain: "kaliyax-api.firebaseapp.com",
-    projectId: "kaliyax-api",
-    storageBucket: "kaliyax-api.firebasestorage.app",
-    messagingSenderId: "500608402",
-    appId: "1:500608402:web:08f3052795fffc2879e54b",
-    measurementId: "G-3CM868DXM5"
+    apiKey: "AIzaSyCdYlIF1-Zx1TpuiQnnScykdrlEqJYj2MA",
+    authDomain: "kaliyax.firebaseapp.com",
+    projectId: "kaliyax",
+    storageBucket: "kaliyax.firebasestorage.app",
+    messagingSenderId: "46921532670",
+    appId: "1:46921532670:web:af7ff28d4b7152b6f0d1af",
+    measurementId: "G-ENGL9B80X2"
 };
 
 // Initialize Firebase
