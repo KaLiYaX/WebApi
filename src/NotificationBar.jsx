@@ -1,3 +1,6 @@
+// FILE: src/NotificationBar.jsx
+// Notification Bar Component
+
 function NotificationBar({ user }) {
     const [notifications, setNotifications] = useState([]);
     const [showNotifications, setShowNotifications] = useState(false);
@@ -7,7 +10,6 @@ function NotificationBar({ user }) {
         if (user) {
             loadNotifications();
             
-            // Real-time listener for new notifications
             const unsubscribe = window.firebaseDB
                 .collection('users')
                 .doc(user.uid)
@@ -71,12 +73,10 @@ function NotificationBar({ user }) {
         if (notification.claimed) return;
 
         try {
-            // Add coins to user balance
             await window.firebaseDB.collection('users').doc(user.uid).update({
                 balance: firebase.firestore.FieldValue.increment(notification.amount)
             });
 
-            // Add transaction
             await window.firebaseDB.collection('users').doc(user.uid).collection('transactions').add({
                 type: 'admin_credit',
                 amount: notification.amount,
@@ -84,7 +84,6 @@ function NotificationBar({ user }) {
                 timestamp: firebase.firestore.FieldValue.serverTimestamp()
             });
 
-            // Mark notification as claimed
             await window.firebaseDB
                 .collection('users')
                 .doc(user.uid)
@@ -95,8 +94,7 @@ function NotificationBar({ user }) {
                     read: true
                 });
 
-            alert(`Successfully claimed ${notification.amount} coins! 🎉`);
-            window.location.reload();
+            alert(`Successfully claimed ${notification.amount} coins!`);
         } catch (error) {
             console.error('Error claiming coins:', error);
             alert('Failed to claim coins!');
@@ -236,25 +234,25 @@ function NotificationBar({ user }) {
                                             </div>
                                             <p className="text-slate-400 text-sm mt-1">{notif.message}</p>
                                             
-                                            {notif.type === 'coin_reward' && !notif.claimed && (
+                                            {notif.type === 'coin_reward' && !notif.claimed && notif.amount > 0 && (
                                                 <button 
-                                                    onClick={() => claimCoins(notif)}
+                                                    onClick={(e) => { e.stopPropagation(); claimCoins(notif); }}
                                                     className="mt-3 px-4 py-2 bg-green-600 hover:bg-green-700 rounded-lg text-sm font-semibold transition-colors w-full"
                                                 >
-                                                    🎉 Claim {notif.amount} Coins
+                                                    Claim {notif.amount} Coins
                                                 </button>
                                             )}
                                             
                                             {notif.type === 'coin_reward' && notif.claimed && (
                                                 <div className="mt-3 px-4 py-2 bg-green-500/10 border border-green-500/30 rounded-lg text-sm text-green-400 text-center">
-                                                    ✓ Claimed
+                                                    Claimed
                                                 </div>
                                             )}
                                             
                                             <div className="flex items-center justify-between mt-2">
                                                 <span className="text-slate-500 text-xs">{formatTime(notif.timestamp)}</span>
                                                 <button 
-                                                    onClick={() => deleteNotification(notif.id)}
+                                                    onClick={(e) => { e.stopPropagation(); deleteNotification(notif.id); }}
                                                     className="text-slate-500 hover:text-red-400 text-xs"
                                                 >
                                                     Delete
