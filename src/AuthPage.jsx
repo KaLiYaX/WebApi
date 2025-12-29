@@ -106,6 +106,8 @@ function AuthPage() {
 
             if (referralCode && referralCode.trim() !== '') {
                 try {
+                    console.log('🔍 Checking referral code:', referralCode);
+                    
                     const referrerQuery = await window.firebaseDB.collection('users')
                         .where('referralCode', '==', referralCode.trim())
                         .limit(1)
@@ -115,6 +117,8 @@ function AuthPage() {
                         const referrerDoc = referrerQuery.docs[0];
                         referrerId = referrerDoc.id;
                         
+                        console.log('✅ Referrer found:', referrerId);
+
                         totalBonus += referralBonusAmount;
 
                         await window.firebaseDB.collection('users').doc(referrerId).update({
@@ -130,17 +134,21 @@ function AuthPage() {
                         });
 
                         await window.firebaseDB.collection('users').doc(referrerId).collection('notifications').add({
-                            type: 'coin_reward',
+                            type: 'announcement',
                             title: '🎉 Referral Bonus Earned!',
-                            message: `You earned ${referralBonusAmount} coins for referring ${email}`,
+                            message: `You earned ${referralBonusAmount} coins for referring ${email}. The coins have been added to your balance!`,
                             amount: 0,
                             claimed: true,
                             read: false,
                             timestamp: firebase.firestore.FieldValue.serverTimestamp()
                         });
+
+                        console.log('✅ Referral bonus processed successfully');
+                    } else {
+                        console.log('❌ Invalid referral code - no user found');
                     }
                 } catch (refError) {
-                    console.error('Referral error:', refError);
+                    console.error('❌ Referral error:', refError);
                 }
             }
 
@@ -177,8 +185,10 @@ function AuthPage() {
                 timestamp: firebase.firestore.FieldValue.serverTimestamp()
             });
 
+            console.log('✅ Signup successful! Total bonus:', totalBonus);
+
         } catch (err) {
-            console.error('Signup error:', err);
+            console.error('❌ Signup error:', err);
             if (err.code === 'auth/email-already-in-use') {
                 setError('Email already in use');
             } else {
@@ -264,7 +274,7 @@ function AuthPage() {
                                     {referralCode && (
                                         <div className="p-3 bg-green-500/10 border border-green-500/30 rounded-lg">
                                             <p className="text-green-400 text-sm font-semibold">
-                                                🎉 Referral code applied! You'll get extra bonus coins
+                                                🎉 Referral code applied! You'll get extra {60} bonus coins
                                             </p>
                                             <p className="text-green-300 text-xs mt-1">
                                                 Code: {referralCode}
