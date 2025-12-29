@@ -1,6 +1,3 @@
-// FILE: src/Dashboard.jsx
-// Main Dashboard Component
-
 function Dashboard({ user }) {
     const [userData, setUserData] = useState(null);
     const [activeTab, setActiveTab] = useState('overview');
@@ -60,7 +57,7 @@ function Dashboard({ user }) {
                     apiKey: newApiKey
                 });
                 
-                alert('API Key regenerated successfully');
+                alert('✅ API Key regenerated successfully');
             } catch (error) {
                 console.error('Error regenerating API key:', error);
             }
@@ -75,7 +72,7 @@ function Dashboard({ user }) {
                 apiKeyPaused: newStatus
             });
             
-            alert(newStatus ? 'API Key paused' : 'API Key resumed');
+            alert(newStatus ? '⏸️ API Key paused' : '▶️ API Key resumed');
         } catch (error) {
             console.error('Error toggling API key:', error);
         }
@@ -97,7 +94,7 @@ function Dashboard({ user }) {
         );
     }
 
-    if (userData?.status === 'suspended') {
+if (userData?.status === 'suspended') {
         return (
             <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 flex items-center justify-center px-4">
                 <div className="text-center max-w-md">
