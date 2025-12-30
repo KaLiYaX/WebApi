@@ -18,9 +18,9 @@ const firebaseConfig = {
 // 4. මේ values replace කරන්න:
 
 const emailJSConfig = {
-    publicKey: 'YOUR_EMAILJS_PUBLIC_KEY',      // e.g., 'user_abc123def456'
+    publicKey: 'kM5fsvsF2tiYW2xi-',      // e.g., 'user_abc123def456'
     serviceId: 'service_x9w7str',               // e.g., 'service_gmail123'
-    templateId: 'YOUR_TEMPLATE_ID'              // e.g., 'template_xyz789'
+    templateId: 'template_543ft4l'              // e.g., 'template_xyz789'
 };
 
 // TEMPLATE EXAMPLE for EmailJS:
