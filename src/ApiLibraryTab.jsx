@@ -1,5 +1,4 @@
-// FILE: src/ApiLibraryTab.jsx
-// API Library Tab Component
+// FILE: src/ApiLibraryTab.jsx - Updated with Perplexity AI
 
 function ApiLibraryTab() {
     const [searchQuery, setSearchQuery] = useState('');
@@ -10,41 +9,49 @@ function ApiLibraryTab() {
         { 
             category: 'AI & ML', 
             apis: [
-                { name: 'GPT Chat', desc: 'Conversational AI powered by GPT', status: 'active', endpoint: '/api/v1/gpt-chat' },
-                { name: 'Image Generation', desc: 'Generate AI images from text prompts', status: 'active', endpoint: '/api/v1/image-gen' },
-                { name: 'Text to Speech', desc: 'Convert text to natural speech', status: 'active', endpoint: '/api/v1/tts' },
-                { name: 'Speech to Text', desc: 'Transcribe audio to text', status: 'active', endpoint: '/api/v1/stt' },
-                { name: 'Sentiment Analysis', desc: 'Analyze text sentiment and emotions', status: 'beta', endpoint: '/api/v1/sentiment' }
+                { 
+                    name: 'Perplexity AI Search', 
+                    desc: 'Advanced AI-powered search with web, academic, social, and finance sources', 
+                    status: 'active', 
+                    endpoint: '/api/v1/perplexity-search',
+                    method: 'POST',
+                    featured: true
+                },
+                { name: 'GPT Chat', desc: 'Conversational AI powered by GPT', status: 'active', endpoint: '/api/v1/gpt-chat', method: 'POST' },
+                { name: 'Image Generation', desc: 'Generate AI images from text prompts', status: 'active', endpoint: '/api/v1/image-gen', method: 'POST' },
+                { name: 'Text to Speech', desc: 'Convert text to natural speech', status: 'active', endpoint: '/api/v1/tts', method: 'POST' },
+                { name: 'Speech to Text', desc: 'Transcribe audio to text', status: 'active', endpoint: '/api/v1/stt', method: 'POST' },
+                { name: 'Sentiment Analysis', desc: 'Analyze text sentiment and emotions', status: 'beta', endpoint: '/api/v1/sentiment', method: 'POST' }
             ]
         },
         { 
             category: 'Data', 
             apis: [
-                { name: 'Weather API', desc: 'Real-time weather data worldwide', status: 'active', endpoint: '/api/v1/weather' },
-                { name: 'Currency Exchange', desc: 'Live currency exchange rates', status: 'active', endpoint: '/api/v1/currency' },
-                { name: 'Stock Prices', desc: 'Real-time stock market data', status: 'active', endpoint: '/api/v1/stocks' },
-                { name: 'News Feed', desc: 'Latest news articles and headlines', status: 'active', endpoint: '/api/v1/news' },
-                { name: 'Crypto Prices', desc: 'Cryptocurrency real-time prices', status: 'active', endpoint: '/api/v1/crypto' }
+                { name: 'Weather API', desc: 'Real-time weather data worldwide', status: 'active', endpoint: '/api/v1/weather', method: 'GET' },
+                { name: 'Currency Exchange', desc: 'Live currency exchange rates', status: 'active', endpoint: '/api/v1/currency', method: 'GET' },
+                { name: 'Stock Prices', desc: 'Real-time stock market data', status: 'active', endpoint: '/api/v1/stocks', method: 'GET' },
+                { name: 'News Feed', desc: 'Latest news articles and headlines', status: 'active', endpoint: '/api/v1/news', method: 'GET' },
+                { name: 'Crypto Prices', desc: 'Cryptocurrency real-time prices', status: 'active', endpoint: '/api/v1/crypto', method: 'GET' }
             ]
         },
         { 
             category: 'Utils', 
             apis: [
-                { name: 'QR Generator', desc: 'Generate QR codes instantly', status: 'active', endpoint: '/api/v1/qr-gen' },
-                { name: 'URL Shortener', desc: 'Shorten long URLs easily', status: 'active', endpoint: '/api/v1/url-short' },
-                { name: 'Email Validator', desc: 'Validate email addresses', status: 'active', endpoint: '/api/v1/email-validate' },
-                { name: 'PDF Generator', desc: 'Convert HTML to PDF documents', status: 'beta', endpoint: '/api/v1/pdf-gen' },
-                { name: 'Image Resize', desc: 'Resize and optimize images', status: 'active', endpoint: '/api/v1/img-resize' }
+                { name: 'QR Generator', desc: 'Generate QR codes instantly', status: 'active', endpoint: '/api/v1/qr-gen', method: 'POST' },
+                { name: 'URL Shortener', desc: 'Shorten long URLs easily', status: 'active', endpoint: '/api/v1/url-short', method: 'POST' },
+                { name: 'Email Validator', desc: 'Validate email addresses', status: 'active', endpoint: '/api/v1/email-validate', method: 'POST' },
+                { name: 'PDF Generator', desc: 'Convert HTML to PDF documents', status: 'beta', endpoint: '/api/v1/pdf-gen', method: 'POST' },
+                { name: 'Image Resize', desc: 'Resize and optimize images', status: 'active', endpoint: '/api/v1/img-resize', method: 'POST' }
             ]
         },
         { 
             category: 'Social', 
             apis: [
-                { name: 'Instagram Data', desc: 'Get Instagram profile information', status: 'active', endpoint: '/api/v1/instagram' },
-                { name: 'Twitter Scraper', desc: 'Extract Twitter data and tweets', status: 'active', endpoint: '/api/v1/twitter' },
-                { name: 'YouTube Stats', desc: 'YouTube video statistics and data', status: 'active', endpoint: '/api/v1/youtube' },
-                { name: 'TikTok Info', desc: 'TikTok video information', status: 'beta', endpoint: '/api/v1/tiktok' },
-                { name: 'Facebook Graph', desc: 'Facebook Graph API access', status: 'active', endpoint: '/api/v1/facebook' }
+                { name: 'Instagram Data', desc: 'Get Instagram profile information', status: 'active', endpoint: '/api/v1/instagram', method: 'GET' },
+                { name: 'Twitter Scraper', desc: 'Extract Twitter data and tweets', status: 'active', endpoint: '/api/v1/twitter', method: 'GET' },
+                { name: 'YouTube Stats', desc: 'YouTube video statistics and data', status: 'active', endpoint: '/api/v1/youtube', method: 'GET' },
+                { name: 'TikTok Info', desc: 'TikTok video information', status: 'beta', endpoint: '/api/v1/tiktok', method: 'GET' },
+                { name: 'Facebook Graph', desc: 'Facebook Graph API access', status: 'active', endpoint: '/api/v1/facebook', method: 'GET' }
             ]
         }
     ];
@@ -111,8 +118,17 @@ function ApiLibraryTab() {
                                 <div 
                                     key={i}
                                     onClick={() => setSelectedEndpoint(api)}
-                                    className="bg-slate-900/80 backdrop-blur-xl rounded-xl border border-slate-800 p-6 hover:border-purple-500 transition-all cursor-pointer group"
+                                    className={`bg-slate-900/80 backdrop-blur-xl rounded-xl border p-6 hover:border-purple-500 transition-all cursor-pointer group ${
+                                        api.featured ? 'border-yellow-500 ring-2 ring-yellow-500/30' : 'border-slate-800'
+                                    }`}
                                 >
+                                    {api.featured && (
+                                        <div className="flex items-center space-x-2 mb-2">
+                                            <span className="text-xs px-2 py-1 bg-yellow-500/10 text-yellow-400 border border-yellow-500/30 rounded-full font-bold">
+                                                ⭐ FEATURED
+                                            </span>
+                                        </div>
+                                    )}
                                     <div className="flex items-start justify-between mb-3">
                                         <h3 className="text-lg font-bold group-hover:text-purple-400 transition-colors">{api.name}</h3>
                                         <span className={`text-xs px-2 py-1 rounded-full ${
@@ -156,7 +172,13 @@ function ApiLibraryTab() {
                                 <h3 className="font-bold mb-3 text-purple-400">Endpoint</h3>
                                 <div className="bg-slate-950/50 rounded-lg p-4 border border-slate-800">
                                     <div className="flex items-center space-x-3">
-                                        <span className="bg-green-500 text-black px-2 py-1 rounded text-xs font-bold">GET</span>
+                                        <span className={`px-2 py-1 rounded text-xs font-bold ${
+                                            selectedEndpoint.method === 'GET' 
+                                                ? 'bg-green-500 text-black' 
+                                                : 'bg-blue-500 text-white'
+                                        }`}>
+                                            {selectedEndpoint.method}
+                                        </span>
                                         <code className="text-purple-400">{selectedEndpoint.endpoint}</code>
                                     </div>
                                 </div>
@@ -171,18 +193,59 @@ function ApiLibraryTab() {
                                 </div>
                             </div>
 
-                            <div>
-                                <h3 className="font-bold mb-3 text-purple-400">Example Response</h3>
-                                <div className="bg-slate-950/50 rounded-lg p-4 border border-slate-800 font-mono text-sm overflow-x-auto">
-                                    <pre className="text-slate-400">{`{
+                            {selectedEndpoint.name === 'Perplexity AI Search' && (
+                                <>
+                                    <div>
+                                        <h3 className="font-bold mb-3 text-purple-400">Request Body (JSON)</h3>
+                                        <div className="bg-slate-950/50 rounded-lg p-4 border border-slate-800 font-mono text-sm overflow-x-auto">
+                                            <pre className="text-slate-400">{`{
+  "query": "What are the latest AI developments?",
+  "source": {
+    "web": true,
+    "academic": false,
+    "social": false,
+    "finance": false
+  }
+}`}</pre>
+                                        </div>
+                                    </div>
+
+                                    <div>
+                                        <h3 className="font-bold mb-3 text-purple-400">Example Response</h3>
+                                        <div className="bg-slate-950/50 rounded-lg p-4 border border-slate-800 font-mono text-sm overflow-x-auto">
+                                            <pre className="text-slate-400">{`{
+  "success": true,
+  "data": {
+    "answer": "AI answer here...",
+    "search_results": [...],
+    "query": "your query",
+    "sources_used": ["web"]
+  },
+  "usage": {
+    "coins_used": 5,
+    "remaining_balance": 95
+  },
+  "timestamp": "2025-12-30T..."
+}`}</pre>
+                                        </div>
+                                    </div>
+                                </>
+                            )}
+
+                            {selectedEndpoint.name !== 'Perplexity AI Search' && (
+                                <div>
+                                    <h3 className="font-bold mb-3 text-purple-400">Example Response</h3>
+                                    <div className="bg-slate-950/50 rounded-lg p-4 border border-slate-800 font-mono text-sm overflow-x-auto">
+                                        <pre className="text-slate-400">{`{
   "status": "success",
   "data": {
     "result": "..."
   },
   "credits_used": 5
 }`}</pre>
+                                    </div>
                                 </div>
-                            </div>
+                            )}
 
                             <div className="flex items-center justify-between p-4 bg-yellow-500/10 border border-yellow-500/30 rounded-lg">
                                 <div>
