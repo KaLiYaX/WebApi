@@ -6,6 +6,10 @@
     <title>KaliyaX API Portal - Professional Developer Dashboard</title>
     <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>K</text></svg>">
     
+    <!-- Meta Tags -->
+    <meta name="description" content="KaliyaX API Portal - Access powerful AI APIs with OAuth authentication. Perplexity AI Search, GPT Chat, and more.">
+    <meta name="keywords" content="API, KaliyaX, Perplexity AI, Developer Portal, OAuth">
+    
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     
@@ -21,9 +25,6 @@
     <!-- Babel Standalone -->
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     
-    <!-- EmailJS SDK for Direct Email -->
-    <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js"></script>
-    
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
@@ -32,13 +33,8 @@
     <!-- Firebase Config -->
     <script type="text/babel" src="./src/config/firebase.js"></script>
     
-    <!-- Email Service -->
-    <script type="text/babel" src="./src/utils/emailService.js"></script>
-    
-    <!-- Components -->
-    <script type="text/babel" src="./src/EmailVerification.jsx"></script>
+    <!-- Components (OAuth Only - No Email Verification) -->
     <script type="text/babel" src="./src/Footer.jsx"></script>
-    <script type="text/babel" src="./src/NotificationBar.jsx"></script>
     <script type="text/babel" src="./src/NotificationsTab.jsx"></script>
     <script type="text/babel" src="./src/TransactionsTab.jsx"></script>
     <script type="text/babel" src="./src/ApiLibraryTab.jsx"></script>
