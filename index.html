@@ -6,23 +6,36 @@
     <title>KaliyaX API Portal - Professional Developer Dashboard</title>
     <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>K</text></svg>">
     
+    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     
+    <!-- Firebase SDK -->
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
     
+    <!-- React & ReactDOM -->
     <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     
+    <!-- Babel Standalone -->
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    
+    <!-- EmailJS SDK for Direct Email -->
+    <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js"></script>
     
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
     <div id="root"></div>
     
+    <!-- Firebase Config -->
     <script type="text/babel" src="./src/config/firebase.js"></script>
+    
+    <!-- Email Service -->
+    <script type="text/babel" src="./src/utils/emailService.js"></script>
+    
+    <!-- Components -->
     <script type="text/babel" src="./src/EmailVerification.jsx"></script>
     <script type="text/babel" src="./src/Footer.jsx"></script>
     <script type="text/babel" src="./src/NotificationBar.jsx"></script>
