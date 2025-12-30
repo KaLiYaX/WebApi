@@ -1,305 +1,276 @@
-// FILE: index.js (Root Level - Firebase Functions)
-// මේකෙන් Firebase Functions run වෙනවා
+// FILE: index.js - Firebase Functions with Perplexity AI Scraper
 
 const functions = require('firebase-functions');
 const admin = require('firebase-admin');
-const nodemailer = require('nodemailer');
+const axios = require('axios');
+const { v4: uuidv4 } = require('uuid');
 
 admin.initializeApp();
 
-// ⚠️ IMPORTANT: මෙතන ඔයාගේ Gmail credentials දාන්න
-// Gmail App Password generate කරන්න: https://myaccount.google.com/apppasswords
-const transporter = nodemailer.createTransport({
-    service: 'gmail',
-    auth: {
-        user: 'kaliya.x.git@gmail.com', // ඔයාගේ Gmail address මෙතන
-        pass: 'kndodvifzrsovrkx' // Gmail App Password (16 characters) මෙතන
+// ============================================
+// PERPLEXITY AI SCRAPER API ENDPOINT
+// ============================================
+
+exports.perplexitySearch = functions.https.onRequest(async (req, res) => {
+    // CORS headers
+    res.set('Access-Control-Allow-Origin', '*');
+    res.set('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+    res.set('Access-Control-Allow-Headers', 'Content-Type, x-api-key');
+
+    if (req.method === 'OPTIONS') {
+        return res.status(200).send('');
     }
-});
 
-// Test email configuration
-transporter.verify(function(error, success) {
-    if (error) {
-        console.log('❌ Email configuration error:', error);
-    } else {
-        console.log('✅ Email server is ready to send messages');
-    }
-});
-
-// Generate 4-digit verification code
-function generateVerificationCode() {
-    return Math.floor(1000 + Math.random() * 9000).toString();
-}
-
-// Send verification email
-exports.sendVerificationEmail = functions.https.onCall(async (data, context) => {
-    const { email, type } = data;
-    
-    console.log(`📧 Sending ${type} verification email to: ${email}`);
-    
     try {
-        const code = generateVerificationCode();
+        // Get API key from headers
+        const apiKey = req.headers['x-api-key'];
         
-        // Save verification code to Firestore (expires in 10 minutes)
-        await admin.firestore().collection('verification_codes').doc(email).set({
-            code: code,
-            type: type,
-            createdAt: admin.firestore.FieldValue.serverTimestamp(),
-            expiresAt: admin.firestore.Timestamp.fromDate(new Date(Date.now() + 10 * 60 * 1000)),
-            verified: false
-        });
-        
-        console.log(`✅ Verification code saved for ${email}: ${code}`);
-        
-        // Email templates based on type
-        let subject, html;
-        
-        if (type === 'signup') {
-            subject = 'KaliyaX API - Email Verification 🎉';
-            html = `
-                <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 10px;">
-                    <div style="background: white; padding: 40px; border-radius: 10px;">
-                        <div style="text-align: center; margin-bottom: 30px;">
-                            <div style="width: 80px; height: 80px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 20px; display: inline-flex; align-items: center; justify-content: center; font-size: 40px; font-weight: bold; color: white; margin-bottom: 20px;">K</div>
-                            <h1 style="color: #667eea; margin: 0; font-size: 28px;">Welcome to KaliyaX API! 🎉</h1>
-                        </div>
-                        
-                        <p style="font-size: 16px; color: #333; margin-bottom: 20px; line-height: 1.6;">
-                            Thank you for signing up! Please verify your email address by entering the code below:
-                        </p>
-                        
-                        <div style="background: #f8f9fa; padding: 30px; text-align: center; border-radius: 12px; margin: 30px 0; border: 2px dashed #667eea;">
-                            <div style="font-size: 14px; color: #666; margin-bottom: 10px; text-transform: uppercase; letter-spacing: 2px; font-weight: 600;">Verification Code</div>
-                            <div style="color: #667eea; font-size: 48px; font-weight: bold; letter-spacing: 8px; font-family: 'Courier New', monospace;">${code}</div>
-                        </div>
-                        
-                        <div style="background: #fff3cd; border-left: 4px solid #ffc107; padding: 15px; margin: 20px 0; border-radius: 4px;">
-                            <p style="margin: 0; color: #856404; font-size: 14px;">
-                                ⏰ This code will expire in <strong>10 minutes</strong>
-                            </p>
-                        </div>
-                        
-                        <p style="font-size: 14px; color: #666; margin-top: 30px; line-height: 1.6;">
-                            If you didn't create an account with KaliyaX API, please ignore this email.
-                        </p>
-                        
-                        <hr style="border: none; border-top: 1px solid #eee; margin: 30px 0;">
-                        
-                        <div style="text-align: center;">
-                            <p style="font-size: 12px; color: #999; margin: 0;">
-                                © 2025 KaliyaX API. All rights reserved.<br>
-                                <a href="https://kaliyax.com" style="color: #667eea; text-decoration: none;">Visit our website</a> | 
-                                <a href="https://docs.kaliyax.com" style="color: #667eea; text-decoration: none;">Documentation</a>
-                            </p>
-                        </div>
-                    </div>
-                </div>
-            `;
-        } else if (type === 'password_reset') {
-            subject = 'KaliyaX API - Password Reset 🔐';
-            html = `
-                <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 10px;">
-                    <div style="background: white; padding: 40px; border-radius: 10px;">
-                        <div style="text-align: center; margin-bottom: 30px;">
-                            <div style="width: 80px; height: 80px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 20px; display: inline-flex; align-items: center; justify-content: center; font-size: 40px; margin-bottom: 20px;">🔐</div>
-                            <h1 style="color: #667eea; margin: 0; font-size: 28px;">Password Reset Request</h1>
-                        </div>
-                        
-                        <p style="font-size: 16px; color: #333; margin-bottom: 20px; line-height: 1.6;">
-                            We received a request to reset your password. Use the code below to continue:
-                        </p>
-                        
-                        <div style="background: #f8f9fa; padding: 30px; text-align: center; border-radius: 12px; margin: 30px 0; border: 2px dashed #667eea;">
-                            <div style="font-size: 14px; color: #666; margin-bottom: 10px; text-transform: uppercase; letter-spacing: 2px; font-weight: 600;">Reset Code</div>
-                            <div style="color: #667eea; font-size: 48px; font-weight: bold; letter-spacing: 8px; font-family: 'Courier New', monospace;">${code}</div>
-                        </div>
-                        
-                        <div style="background: #fff3cd; border-left: 4px solid #ffc107; padding: 15px; margin: 20px 0; border-radius: 4px;">
-                            <p style="margin: 0; color: #856404; font-size: 14px;">
-                                ⏰ This code will expire in <strong>10 minutes</strong>
-                            </p>
-                        </div>
-                        
-                        <div style="background: #f8d7da; border-left: 4px solid #dc3545; padding: 15px; margin: 20px 0; border-radius: 4px;">
-                            <p style="margin: 0; color: #721c24; font-size: 14px;">
-                                ⚠️ If you didn't request a password reset, please ignore this email and your password will remain unchanged.
-                            </p>
-                        </div>
-                        
-                        <hr style="border: none; border-top: 1px solid #eee; margin: 30px 0;">
-                        
-                        <div style="text-align: center;">
-                            <p style="font-size: 12px; color: #999; margin: 0;">
-                                © 2025 KaliyaX API. All rights reserved.
-                            </p>
-                        </div>
-                    </div>
-                </div>
-            `;
-        } else if (type === 'email_change') {
-            subject = 'KaliyaX API - Email Change Verification 📧';
-            html = `
-                <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 10px;">
-                    <div style="background: white; padding: 40px; border-radius: 10px;">
-                        <div style="text-align: center; margin-bottom: 30px;">
-                            <div style="width: 80px; height: 80px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 20px; display: inline-flex; align-items: center; justify-content: center; font-size: 40px; margin-bottom: 20px;">📧</div>
-                            <h1 style="color: #667eea; margin: 0; font-size: 28px;">Verify Your New Email</h1>
-                        </div>
-                        
-                        <p style="font-size: 16px; color: #333; margin-bottom: 20px; line-height: 1.6;">
-                            Please verify your new email address by entering the code below:
-                        </p>
-                        
-                        <div style="background: #f8f9fa; padding: 30px; text-align: center; border-radius: 12px; margin: 30px 0; border: 2px dashed #667eea;">
-                            <div style="font-size: 14px; color: #666; margin-bottom: 10px; text-transform: uppercase; letter-spacing: 2px; font-weight: 600;">Verification Code</div>
-                            <div style="color: #667eea; font-size: 48px; font-weight: bold; letter-spacing: 8px; font-family: 'Courier New', monospace;">${code}</div>
-                        </div>
-                        
-                        <div style="background: #fff3cd; border-left: 4px solid #ffc107; padding: 15px; margin: 20px 0; border-radius: 4px;">
-                            <p style="margin: 0; color: #856404; font-size: 14px;">
-                                ⏰ This code will expire in <strong>10 minutes</strong>
-                            </p>
-                        </div>
-                        
-                        <hr style="border: none; border-top: 1px solid #eee; margin: 30px 0;">
-                        
-                        <div style="text-align: center;">
-                            <p style="font-size: 12px; color: #999; margin: 0;">
-                                © 2025 KaliyaX API. All rights reserved.
-                            </p>
-                        </div>
-                    </div>
-                </div>
-            `;
+        if (!apiKey) {
+            return res.status(401).json({
+                success: false,
+                error: 'API key is required',
+                message: 'Please provide x-api-key in headers'
+            });
         }
-        
-        // Send email using nodemailer
-        const mailOptions = {
-            from: `"KaliyaX API" <${transporter.options.auth.user}>`,
-            to: email,
-            subject: subject,
-            html: html
-        };
-        
-        await transporter.sendMail(mailOptions);
-        
-        console.log(`✅ Email sent successfully to ${email}`);
-        
-        return { 
-            success: true, 
-            message: 'Verification code sent successfully!' 
-        };
-        
-    } catch (error) {
-        console.error('❌ Error in sendVerificationEmail:', error);
-        throw new functions.https.HttpsError(
-            'internal', 
-            `Failed to send verification email: ${error.message}`
-        );
-    }
-});
 
-// Verify code
-exports.verifyCode = functions.https.onCall(async (data, context) => {
-    const { email, code } = data;
-    
-    console.log(`🔍 Verifying code for email: ${email}`);
-    
-    try {
-        const doc = await admin.firestore()
-            .collection('verification_codes')
-            .doc(email)
+        // Verify API key and get user
+        const userSnapshot = await admin.firestore()
+            .collection('users')
+            .where('apiKey', '==', apiKey)
+            .limit(1)
+            .get();
+
+        if (userSnapshot.empty) {
+            return res.status(401).json({
+                success: false,
+                error: 'Invalid API key',
+                message: 'API key not found or invalid'
+            });
+        }
+
+        const userDoc = userSnapshot.docs[0];
+        const userId = userDoc.id;
+        const userData = userDoc.data();
+
+        // Check if user is active
+        if (userData.status !== 'active') {
+            return res.status(403).json({
+                success: false,
+                error: 'Account suspended',
+                message: 'Your account has been suspended'
+            });
+        }
+
+        // Check if API key is paused
+        if (userData.apiKeyPaused) {
+            return res.status(403).json({
+                success: false,
+                error: 'API key paused',
+                message: 'Your API key has been paused'
+            });
+        }
+
+        // Get cost per call from settings
+        const settingsDoc = await admin.firestore()
+            .collection('settings')
+            .doc('system')
             .get();
         
-        if (!doc.exists) {
-            console.log(`❌ Verification code not found for ${email}`);
-            throw new functions.https.HttpsError(
-                'not-found', 
-                'Verification code not found. Please request a new code.'
-            );
+        const costPerCall = settingsDoc.exists ? (settingsDoc.data().apiCostPerCall || 5) : 5;
+
+        // Check if user has sufficient balance
+        if (userData.balance < costPerCall) {
+            return res.status(402).json({
+                success: false,
+                error: 'Insufficient balance',
+                message: `You need at least ${costPerCall} coins. Your balance: ${userData.balance} coins`,
+                required_coins: costPerCall,
+                current_balance: userData.balance
+            });
         }
-        
-        const data = doc.data();
-        const now = admin.firestore.Timestamp.now();
-        
-        // Check if code has expired
-        if (now.toMillis() > data.expiresAt.toMillis()) {
-            console.log(`⏰ Verification code expired for ${email}`);
-            await doc.ref.delete();
-            throw new functions.https.HttpsError(
-                'deadline-exceeded', 
-                'Verification code has expired. Please request a new code.'
-            );
+
+        // Get query and source from request
+        const { query, source = { web: true, academic: false, social: false, finance: false } } = req.method === 'GET' ? req.query : req.body;
+
+        if (!query) {
+            return res.status(400).json({
+                success: false,
+                error: 'Query is required',
+                message: 'Please provide a query parameter'
+            });
         }
-        
-        // Check if code matches
-        if (data.code !== code) {
-            console.log(`❌ Invalid code entered for ${email}`);
-            throw new functions.https.HttpsError(
-                'invalid-argument', 
-                'Invalid verification code. Please check and try again.'
-            );
+
+        // Parse source if it's a string (from GET request)
+        let parsedSource = source;
+        if (typeof source === 'string') {
+            try {
+                parsedSource = JSON.parse(source);
+            } catch (e) {
+                parsedSource = { web: true, academic: false, social: false, finance: false };
+            }
         }
-        
-        // Mark as verified
-        await doc.ref.update({ verified: true });
-        
-        console.log(`✅ Code verified successfully for ${email}`);
-        
-        return { 
-            success: true, 
-            verified: true,
-            message: 'Email verified successfully!'
+
+        console.log(`🔍 Processing Perplexity search for user ${userData.email}: "${query}"`);
+
+        // Call Perplexity API
+        const sourceMapping = {
+            web: 'web',
+            academic: 'scholar',
+            social: 'social',
+            finance: 'edgar'
         };
-        
+
+        const activeSources = Object.keys(parsedSource)
+            .filter(key => parsedSource[key] === true)
+            .map(key => sourceMapping[key])
+            .filter(Boolean);
+
+        const frontend = uuidv4();
+
+        const { data } = await axios.post('https://api.nekolabs.web.id/px?url=https://www.perplexity.ai/rest/sse/perplexity_ask', {
+            params: {
+                attachments: [],
+                language: 'en-US',
+                timezone: 'Asia/Colombo',
+                search_focus: 'internet',
+                sources: activeSources.length > 0 ? activeSources : ['web'],
+                search_recency_filter: null,
+                frontend_uuid: frontend,
+                mode: 'concise',
+                model_preference: 'turbo',
+                is_related_query: false,
+                is_sponsored: false,
+                visitor_id: uuidv4(),
+                frontend_context_uuid: uuidv4(),
+                prompt_source: 'user',
+                query_source: 'home',
+                is_incognito: false,
+                time_from_first_type: 2273.9,
+                local_search_enabled: false,
+                use_schematized_api: true,
+                send_back_text_in_streaming_api: false,
+                supported_block_use_cases: [
+                    'answer_modes', 'media_items', 'knowledge_cards',
+                    'inline_entity_cards', 'place_widgets', 'finance_widgets',
+                    'sports_widgets', 'flight_status_widgets', 'shopping_widgets',
+                    'jobs_widgets', 'search_result_widgets', 'clarification_responses',
+                    'inline_images', 'inline_assets', 'inline_finance_widgets',
+                    'placeholder_cards', 'diff_blocks', 'inline_knowledge_cards',
+                    'entity_group_v2', 'refinement_filters', 'canvas_mode',
+                    'maps_preview', 'answer_tabs'
+                ],
+                client_coordinates: null,
+                mentions: [],
+                dsl_query: query,
+                skip_search_enabled: true,
+                is_nav_suggestions_disabled: false,
+                always_search_override: false,
+                override_no_search: false,
+                comet_max_assistant_enabled: false,
+                should_ask_for_mcp_tool_confirmation: true,
+                version: '2.18'
+            },
+            query_str: query
+        }, {
+            headers: {
+                'content-type': 'application/json',
+                'referer': 'https://www.perplexity.ai/search/',
+                'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+                'x-request-id': frontend,
+                'x-perplexity-request-reason': 'perplexity-query-state-provider'
+            },
+            timeout: 30000
+        });
+
+        // Parse Perplexity response
+        const info = JSON.parse(
+            data.result.content
+                .split('\n')
+                .filter(l => l.startsWith('data:'))
+                .map(l => JSON.parse(l.slice(6)))
+                .find(l => l.final_sse_message).text
+        );
+
+        const answer = JSON.parse(
+            info.find(s => s.step_type === 'FINAL')?.content?.answer || '{}'
+        ).answer;
+
+        const searchResults = info.find(s => s.step_type === 'SEARCH_RESULTS')?.content?.web_results || [];
+
+        if (!answer) {
+            throw new Error('No result found from Perplexity');
+        }
+
+        // Deduct coins from user balance
+        await admin.firestore().collection('users').doc(userId).update({
+            balance: admin.firestore.FieldValue.increment(-costPerCall),
+            totalCalls: admin.firestore.FieldValue.increment(1)
+        });
+
+        // Add transaction record
+        await admin.firestore()
+            .collection('users')
+            .doc(userId)
+            .collection('transactions')
+            .add({
+                type: 'usage',
+                amount: -costPerCall,
+                endpoint: '/api/v1/perplexity-search',
+                description: `Perplexity AI Search: "${query.substring(0, 50)}${query.length > 50 ? '...' : ''}"`,
+                timestamp: admin.firestore.FieldValue.serverTimestamp()
+            });
+
+        console.log(`✅ Perplexity search completed for ${userData.email}. Coins deducted: ${costPerCall}`);
+
+        // Return response
+        return res.status(200).json({
+            success: true,
+            data: {
+                answer: answer,
+                search_results: searchResults,
+                query: query,
+                sources_used: activeSources.length > 0 ? activeSources : ['web']
+            },
+            usage: {
+                coins_used: costPerCall,
+                remaining_balance: userData.balance - costPerCall
+            },
+            timestamp: new Date().toISOString()
+        });
+
     } catch (error) {
-        console.error('❌ Error in verifyCode:', error);
-        throw error;
+        console.error('❌ Perplexity API Error:', error);
+
+        let errorMessage = 'Internal server error';
+        let statusCode = 500;
+
+        if (error.code === 'ECONNABORTED' || error.message.includes('timeout')) {
+            errorMessage = 'Request timeout. Perplexity AI is taking too long to respond.';
+            statusCode = 504;
+        } else if (error.response) {
+            errorMessage = error.response.data?.error || 'External API error';
+            statusCode = error.response.status || 500;
+        } else if (error.message) {
+            errorMessage = error.message;
+        }
+
+        return res.status(statusCode).json({
+            success: false,
+            error: errorMessage,
+            message: 'Failed to process Perplexity search request'
+        });
     }
 });
 
-// Cleanup expired verification codes (scheduled function - runs every hour)
-exports.cleanupExpiredCodes = functions.pubsub
-    .schedule('every 1 hours')
-    .onRun(async (context) => {
-        console.log('🧹 Starting cleanup of expired verification codes...');
-        
-        const now = admin.firestore.Timestamp.now();
-        
-        try {
-            const snapshot = await admin.firestore()
-                .collection('verification_codes')
-                .where('expiresAt', '<', now)
-                .get();
-            
-            if (snapshot.empty) {
-                console.log('✅ No expired codes to clean up');
-                return null;
-            }
-            
-            const batch = admin.firestore().batch();
-            
-            snapshot.docs.forEach((doc) => {
-                batch.delete(doc.ref);
-            });
-            
-            await batch.commit();
-            
-            console.log(`✅ Cleaned up ${snapshot.size} expired verification codes`);
-            
-        } catch (error) {
-            console.error('❌ Error during cleanup:', error);
-        }
-        
-        return null;
-    });
+// ============================================
+// TEST FUNCTION
+// ============================================
 
-// Test function (for debugging)
-exports.testFunction = functions.https.onCall(async (data, context) => {
+exports.testPerplexity = functions.https.onCall(async (data, context) => {
     console.log('🧪 Test function called');
-    return { 
-        success: true, 
-        message: 'Firebase Functions are working correctly!',
+    return {
+        success: true,
+        message: 'Firebase Functions are working!',
         timestamp: new Date().toISOString()
     };
 });
