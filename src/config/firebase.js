@@ -19,7 +19,7 @@ const firebaseConfig = {
 
 const emailJSConfig = {
     publicKey: 'YOUR_EMAILJS_PUBLIC_KEY',      // e.g., 'user_abc123def456'
-    serviceId: 'YOUR_SERVICE_ID',               // e.g., 'service_gmail123'
+    serviceId: 'service_x9w7str',               // e.g., 'service_gmail123'
     templateId: 'YOUR_TEMPLATE_ID'              // e.g., 'template_xyz789'
 };
 
