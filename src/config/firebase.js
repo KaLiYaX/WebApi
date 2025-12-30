@@ -1,5 +1,5 @@
 // FILE: src/config/firebase.js
-// Firebase Configuration
+// Firebase Configuration + EmailJS
 
 const firebaseConfig = {
     apiKey: "AIzaSyCdYlIF1-Zx1TpuiQnnScykdrlEqJYj2MA",
@@ -10,6 +10,26 @@ const firebaseConfig = {
     appId: "1:46921532670:web:af7ff28d4b7152b6f0d1af",
     measurementId: "G-ENGL9B80X2"
 };
+
+// ⚠️ IMPORTANT: EmailJS Configuration
+// 1. https://www.emailjs.com/ වලට යන්න (FREE)
+// 2. Gmail service එක connect කරන්න
+// 3. Email template එකක් හදාගන්න
+// 4. මේ values replace කරන්න:
+
+const emailJSConfig = {
+    publicKey: 'YOUR_EMAILJS_PUBLIC_KEY',      // e.g., 'user_abc123def456'
+    serviceId: 'YOUR_SERVICE_ID',               // e.g., 'service_gmail123'
+    templateId: 'YOUR_TEMPLATE_ID'              // e.g., 'template_xyz789'
+};
+
+// TEMPLATE EXAMPLE for EmailJS:
+// Subject: KaliyaX API - Email Verification
+// Body:
+// Hello,
+// Your verification code is: {{code}}
+// This code expires in {{expires_in}}.
+// Best regards, KaliyaX Team
 
 // Initialize Firebase
 if (!firebase.apps.length) {
@@ -23,6 +43,7 @@ const db = firebase.firestore();
 // Export services globally
 window.firebaseAuth = auth;
 window.firebaseDB = db;
+window.emailJSConfig = emailJSConfig;
 
 // Enable persistence
 db.enablePersistence()
@@ -34,4 +55,5 @@ db.enablePersistence()
         }
     });
 
-console.log('Firebase initialized successfully');
+console.log('✅ Firebase initialized');
+console.log('✅ EmailJS configured');
