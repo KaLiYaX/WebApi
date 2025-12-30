@@ -1,4 +1,4 @@
-// FILE: src/AuthPage.jsx - WITH OAUTH & EMAIL VERIFICATION
+// FILE: src/AuthPage.jsx - COMPLETE WITH EMAILJS
 
 const { useState, useEffect } = React;
 
@@ -92,13 +92,15 @@ function AuthPage() {
         setLoading(true);
 
         try {
-            // Send verification email FIRST
-            const sendEmailFunction = firebase.functions().httpsCallable('sendVerificationEmail');
-            await sendEmailFunction({ email, type: 'signup' });
+            // Send verification email using EmailJS
+            const result = await window.emailService.sendVerificationEmail(email, 'signup');
             
-            // Show verification page
-            setPendingEmail(email);
-            setShowVerification(true);
+            if (result.success) {
+                setPendingEmail(email);
+                setShowVerification(true);
+            } else {
+                setError(result.message || 'Failed to send verification email');
+            }
         } catch (err) {
             console.error('Signup error:', err);
             setError('Failed to send verification email. Please try again.');
@@ -121,10 +123,10 @@ function AuthPage() {
                     referralBonusAmount = settings.referralBonus || 60;
                 }
             } catch (settingsError) {
-                console.warn('Could not load settings, using defaults:', settingsError);
+                console.warn('Using default settings');
             }
 
-            // NOW create Firebase account
+            // Create Firebase account
             const userCredential = await window.firebaseAuth.createUserWithEmailAndPassword(pendingEmail, password);
             const user = userCredential.user;
 
@@ -166,7 +168,7 @@ function AuthPage() {
                         await window.firebaseDB.collection('users').doc(referrerId).collection('notifications').add({
                             type: 'announcement',
                             title: '🎉 Referral Bonus Earned!',
-                            message: `You earned ${referralBonusAmount} coins for referring ${pendingEmail}. The coins have been added to your balance!`,
+                            message: `You earned ${referralBonusAmount} coins for referring ${pendingEmail}!`,
                             amount: 0,
                             claimed: true,
                             read: false,
@@ -206,12 +208,11 @@ function AuthPage() {
             await window.firebaseDB.collection('users').doc(user.uid).collection('notifications').add({
                 type: 'announcement',
                 title: '🎉 Welcome to KaliyaX API!',
-                message: `Your account has been created successfully. You received ${totalBonus} coins as bonus${referrerId ? ' (including referral bonus!)' : ''}`,
+                message: `Account created! You received ${totalBonus} coins${referrerId ? ' (including referral bonus!)' : ''}`,
                 read: false,
                 timestamp: firebase.firestore.FieldValue.serverTimestamp()
             });
 
-            // Success!
             alert('✅ Account created successfully!');
         } catch (err) {
             console.error('Account creation error:', err);
@@ -237,11 +238,9 @@ function AuthPage() {
             const result = await window.firebaseAuth.signInWithPopup(authProvider);
             const user = result.user;
 
-            // Check if user exists
             const userDoc = await window.firebaseDB.collection('users').doc(user.uid).get();
 
             if (!userDoc.exists) {
-                // New user - create account
                 let welcomeBonus = 100;
                 let referralBonusAmount = 60;
 
@@ -253,7 +252,7 @@ function AuthPage() {
                         referralBonusAmount = settings.referralBonus || 60;
                     }
                 } catch (settingsError) {
-                    console.warn('Could not load settings, using defaults');
+                    console.warn('Using defaults');
                 }
 
                 const apiKey = 'kx_live_' + Math.random().toString(36).substring(2, 15) + 
@@ -266,7 +265,6 @@ function AuthPage() {
                 let totalBonus = welcomeBonus;
                 let referrerId = null;
 
-                // Check referral code
                 if (referralCode && referralCode.trim() !== '') {
                     try {
                         const referrerQuery = await window.firebaseDB.collection('users')
@@ -289,16 +287,6 @@ function AuthPage() {
                                 amount: referralBonusAmount,
                                 from: user.email,
                                 description: `Referral bonus from ${user.email}`,
-                                timestamp: firebase.firestore.FieldValue.serverTimestamp()
-                            });
-
-                            await window.firebaseDB.collection('users').doc(referrerId).collection('notifications').add({
-                                type: 'announcement',
-                                title: '🎉 Referral Bonus Earned!',
-                                message: `You earned ${referralBonusAmount} coins for referring ${user.email}!`,
-                                amount: 0,
-                                claimed: true,
-                                read: false,
                                 timestamp: firebase.firestore.FieldValue.serverTimestamp()
                             });
                         }
@@ -332,16 +320,7 @@ function AuthPage() {
                         : `Welcome bonus (${welcomeBonus})`,
                     timestamp: firebase.firestore.FieldValue.serverTimestamp()
                 });
-
-                await window.firebaseDB.collection('users').doc(user.uid).collection('notifications').add({
-                    type: 'announcement',
-                    title: '🎉 Welcome to KaliyaX API!',
-                    message: `Your account has been created successfully with ${provider}. You received ${totalBonus} coins!`,
-                    read: false,
-                    timestamp: firebase.firestore.FieldValue.serverTimestamp()
-                });
             } else {
-                // Existing user
                 if (userDoc.data().status === 'suspended') {
                     await window.firebaseAuth.signOut();
                     setError('Your account has been suspended');
@@ -354,7 +333,7 @@ function AuthPage() {
             if (err.code === 'auth/popup-closed-by-user') {
                 setError('Sign-in cancelled');
             } else if (err.code === 'auth/account-exists-with-different-credential') {
-                setError('An account already exists with this email');
+                setError('Account already exists with this email');
             } else {
                 setError(err.message);
             }
@@ -403,7 +382,7 @@ function AuthPage() {
                                 {isLogin ? 'Welcome Back' : 'Create Account'}
                             </h2>
                             <p className="text-slate-400">
-                                {isLogin ? 'Sign in to access your developer dashboard' : 'Join thousands of developers'}
+                                {isLogin ? 'Sign in to your dashboard' : 'Join thousands of developers'}
                             </p>
                         </div>
 
@@ -452,7 +431,7 @@ function AuthPage() {
                                     {referralCode && (
                                         <div className="p-3 bg-green-500/10 border border-green-500/30 rounded-lg">
                                             <p className="text-green-400 text-sm font-semibold">
-                                                🎉 Referral code applied! You'll get extra 60 bonus coins
+                                                🎉 Referral code applied! Extra 60 coins bonus
                                             </p>
                                             <p className="text-green-300 text-xs mt-1">
                                                 Code: {referralCode}
