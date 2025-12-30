@@ -14,7 +14,7 @@ function EmailVerification({ email, onVerified, onBack, type = 'signup' }) {
         inputRefs[0].current?.focus();
     }, []);
 
-    // Countdown timer for resend
+    // Countdown timer
     useEffect(() => {
         if (countdown > 0) {
             const timer = setTimeout(() => setCountdown(countdown - 1), 1000);
@@ -23,14 +23,13 @@ function EmailVerification({ email, onVerified, onBack, type = 'signup' }) {
     }, [countdown]);
 
     const handleChange = (index, value) => {
-        if (!/^\d*$/.test(value)) return; // Only numbers
+        if (!/^\d*$/.test(value)) return;
         if (value.length > 1) value = value[0];
 
         const newCode = [...code];
         newCode[index] = value;
         setCode(newCode);
 
-        // Auto-focus next input
         if (value && index < 3) {
             inputRefs[index + 1].current?.focus();
         }
@@ -71,7 +70,6 @@ function EmailVerification({ email, onVerified, onBack, type = 'signup' }) {
         
         setCode(newCode);
         
-        // Focus last filled input
         const lastIndex = Math.min(pastedData.length - 1, 3);
         inputRefs[lastIndex].current?.focus();
         
@@ -85,28 +83,20 @@ function EmailVerification({ email, onVerified, onBack, type = 'signup' }) {
         setError('');
 
         try {
-            // Call Firebase Function to verify
-            const verifyFunction = firebase.functions().httpsCallable('verifyCode');
-            const result = await verifyFunction({ email, code: fullCode });
+            // Use EmailService to verify
+            const result = await window.emailService.verifyCode(email, fullCode);
 
-            if (result.data.verified) {
-                // Delete the verification code after successful verification
-                await firebase.firestore().collection('verification_codes').doc(email).delete();
+            if (result.success && result.verified) {
+                await window.emailService.deleteVerificationCode(email);
                 onVerified();
             } else {
-                setError('Invalid verification code');
+                setError(result.message || 'Invalid verification code');
                 setCode(['', '', '', '']);
                 inputRefs[0].current?.focus();
             }
         } catch (err) {
             console.error('Verification error:', err);
-            if (err.code === 'deadline-exceeded') {
-                setError('Code expired. Please request a new one.');
-            } else if (err.code === 'invalid-argument') {
-                setError('Invalid verification code');
-            } else {
-                setError('Verification failed. Please try again.');
-            }
+            setError('Verification failed. Please try again.');
             setCode(['', '', '', '']);
             inputRefs[0].current?.focus();
         } finally {
@@ -121,10 +111,15 @@ function EmailVerification({ email, onVerified, onBack, type = 'signup' }) {
         setError('');
 
         try {
-            const sendEmailFunction = firebase.functions().httpsCallable('sendVerificationEmail');
-            await sendEmailFunction({ email, type });
-            setCountdown(60); // 60 seconds cooldown
-            alert('✅ New verification code sent!');
+            // Use EmailService to resend
+            const result = await window.emailService.sendVerificationEmail(email, type);
+            
+            if (result.success) {
+                setCountdown(60);
+                alert('✅ New verification code sent!');
+            } else {
+                setError(result.message || 'Failed to resend code');
+            }
         } catch (err) {
             setError('Failed to resend code. Please try again.');
         } finally {
