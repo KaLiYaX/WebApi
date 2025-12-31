@@ -1,9 +1,34 @@
-// FILE: src/ApiLibraryTab.jsx - Updated with YouTube APIs
+// FILE: src/ApiLibraryTab.jsx - With Live Test Button
 
 function ApiLibraryTab() {
     const [searchQuery, setSearchQuery] = useState('');
     const [selectedCategory, setSelectedCategory] = useState('All');
     const [selectedEndpoint, setSelectedEndpoint] = useState(null);
+    const [testParams, setTestParams] = useState({});
+    const [testLoading, setTestLoading] = useState(false);
+    const [testResult, setTestResult] = useState(null);
+    const [userData, setUserData] = useState(null);
+
+    useEffect(() => {
+        loadUserData();
+    }, []);
+
+    const loadUserData = async () => {
+        try {
+            const user = window.firebaseAuth.currentUser;
+            if (user) {
+                const doc = await window.firebaseDB.collection('users').doc(user.uid).get();
+                if (doc.exists) {
+                    setUserData(doc.data());
+                }
+            }
+        } catch (error) {
+            console.error('Error loading user data:', error);
+        }
+    };
+
+    // IMPORTANT: ඔබේ Vercel URL එක මෙතන දාන්න
+    const API_BASE_URL = 'https://web-api-q7ey.vercel.app';
 
     const endpoints = [
         { 
@@ -11,46 +36,12 @@ function ApiLibraryTab() {
             apis: [
                 { 
                     name: 'Perplexity AI Search', 
-                    desc: 'Advanced AI-powered search with web, academic, social, and finance sources', 
+                    desc: 'Advanced AI-powered search', 
                     status: 'active', 
-                    endpoint: '/api/v1/perplexity-search',
+                    endpoint: `${API_BASE_URL}/api/perplexity-search`,
                     method: 'POST',
                     featured: true
-                },
-                { name: 'GPT Chat', desc: 'Conversational AI powered by GPT', status: 'active', endpoint: '/api/v1/gpt-chat', method: 'POST' },
-                { name: 'Image Generation', desc: 'Generate AI images from text prompts', status: 'active', endpoint: '/api/v1/image-gen', method: 'POST' },
-                { name: 'Text to Speech', desc: 'Convert text to natural speech', status: 'active', endpoint: '/api/v1/tts', method: 'POST' },
-                { name: 'Speech to Text', desc: 'Transcribe audio to text', status: 'active', endpoint: '/api/v1/stt', method: 'POST' },
-                { name: 'Sentiment Analysis', desc: 'Analyze text sentiment and emotions', status: 'beta', endpoint: '/api/v1/sentiment', method: 'POST' }
-            ]
-        },
-        { 
-            category: 'Data', 
-            apis: [
-                { name: 'Weather API', desc: 'Real-time weather data worldwide', status: 'active', endpoint: '/api/v1/weather', method: 'GET' },
-                { name: 'Currency Exchange', desc: 'Live currency exchange rates', status: 'active', endpoint: '/api/v1/currency', method: 'GET' },
-                { name: 'Stock Prices', desc: 'Real-time stock market data', status: 'active', endpoint: '/api/v1/stocks', method: 'GET' },
-                { name: 'News Feed', desc: 'Latest news articles and headlines', status: 'active', endpoint: '/api/v1/news', method: 'GET' },
-                { name: 'Crypto Prices', desc: 'Cryptocurrency real-time prices', status: 'active', endpoint: '/api/v1/crypto', method: 'GET' }
-            ]
-        },
-        { 
-            category: 'Utils', 
-            apis: [
-                { name: 'QR Generator', desc: 'Generate QR codes instantly', status: 'active', endpoint: '/api/v1/qr-gen', method: 'POST' },
-                { name: 'URL Shortener', desc: 'Shorten long URLs easily', status: 'active', endpoint: '/api/v1/url-short', method: 'POST' },
-                { name: 'Email Validator', desc: 'Validate email addresses', status: 'active', endpoint: '/api/v1/email-validate', method: 'POST' },
-                { name: 'PDF Generator', desc: 'Convert HTML to PDF documents', status: 'beta', endpoint: '/api/v1/pdf-gen', method: 'POST' },
-                { name: 'Image Resize', desc: 'Resize and optimize images', status: 'active', endpoint: '/api/v1/img-resize', method: 'POST' }
-            ]
-        },
-        { 
-            category: 'Social', 
-            apis: [
-                { name: 'Instagram Data', desc: 'Get Instagram profile information', status: 'active', endpoint: '/api/v1/instagram', method: 'GET' },
-                { name: 'Twitter Scraper', desc: 'Extract Twitter data and tweets', status: 'active', endpoint: '/api/v1/twitter', method: 'GET' },
-                { name: 'Facebook Graph', desc: 'Facebook Graph API access', status: 'active', endpoint: '/api/v1/facebook', method: 'GET' },
-                { name: 'TikTok Info', desc: 'TikTok video information', status: 'beta', endpoint: '/api/v1/tiktok', method: 'GET' }
+                }
             ]
         },
         { 
@@ -58,64 +49,118 @@ function ApiLibraryTab() {
             apis: [
                 { 
                     name: 'YouTube Search', 
-                    desc: 'Search for YouTube videos by query', 
+                    desc: 'Search YouTube videos', 
                     status: 'active', 
-                    endpoint: '/api/v1/youtube/search',
-                    method: 'GET',
-                    featured: true,
-                    params: { q: 'Search query' }
-                },
-                { 
-                    name: 'YouTube MP3 Download', 
-                    desc: 'Download YouTube videos as MP3 audio files', 
-                    status: 'active', 
-                    endpoint: '/api/v1/youtube/mp3',
+                    endpoint: `${API_BASE_URL}/api/youtube/search`,
                     method: 'GET',
                     featured: true,
                     params: { 
-                        url: 'YouTube video URL',
-                        quality: '128 (optional: 32, 64, 96, 128, 160, 192, 256, 320)'
+                        q: { 
+                            type: 'text', 
+                            label: 'Search Query', 
+                            placeholder: 'sajith premadasa speech', 
+                            required: true 
+                        }
+                    }
+                },
+                { 
+                    name: 'YouTube MP3 Download', 
+                    desc: 'Download YouTube as MP3', 
+                    status: 'active', 
+                    endpoint: `${API_BASE_URL}/api/youtube/mp3`,
+                    method: 'GET',
+                    featured: true,
+                    params: { 
+                        url: { 
+                            type: 'text', 
+                            label: 'YouTube URL', 
+                            placeholder: 'https://www.youtube.com/watch?v=...', 
+                            required: true 
+                        },
+                        quality: { 
+                            type: 'select', 
+                            label: 'Quality', 
+                            options: ['32', '64', '96', '128', '160', '192', '256', '320'], 
+                            default: '128' 
+                        }
                     }
                 },
                 { 
                     name: 'YouTube MP4 Download', 
-                    desc: 'Download YouTube videos as MP4 video files', 
+                    desc: 'Download YouTube as MP4', 
                     status: 'active', 
-                    endpoint: '/api/v1/youtube/mp4',
+                    endpoint: `${API_BASE_URL}/api/youtube/mp4`,
                     method: 'GET',
                     params: { 
-                        url: 'YouTube video URL',
-                        quality: '360 (optional: 144, 240, 360, 480, 720, 1080, 1440)'
+                        url: { 
+                            type: 'text', 
+                            label: 'YouTube URL', 
+                            placeholder: 'https://www.youtube.com/watch?v=...', 
+                            required: true 
+                        },
+                        quality: { 
+                            type: 'select', 
+                            label: 'Quality', 
+                            options: ['144', '240', '360', '480', '720', '1080', '1440'], 
+                            default: '360' 
+                        }
                     }
                 },
                 { 
                     name: 'YouTube Transcript', 
-                    desc: 'Get video transcript with AI summarization', 
+                    desc: 'Get video transcript with AI summary', 
                     status: 'active', 
-                    endpoint: '/api/v1/youtube/transcript',
+                    endpoint: `${API_BASE_URL}/api/youtube/transcript`,
                     method: 'GET',
-                    params: { url: 'YouTube video URL' }
+                    params: { 
+                        url: { 
+                            type: 'text', 
+                            label: 'YouTube URL', 
+                            placeholder: 'https://www.youtube.com/watch?v=...', 
+                            required: true 
+                        }
+                    }
                 },
                 { 
                     name: 'Play MP3', 
-                    desc: 'Search and get MP3 download links for top 5 results', 
+                    desc: 'Search and get MP3 downloads (Top 5)', 
                     status: 'active', 
-                    endpoint: '/api/v1/youtube/playmp3',
+                    endpoint: `${API_BASE_URL}/api/youtube/playmp3`,
                     method: 'GET',
                     params: { 
-                        q: 'Search query',
-                        quality: '128 (optional)'
+                        q: { 
+                            type: 'text', 
+                            label: 'Search Query', 
+                            placeholder: 'song name', 
+                            required: true 
+                        },
+                        quality: { 
+                            type: 'select', 
+                            label: 'Quality', 
+                            options: ['128', '192', '256', '320'], 
+                            default: '128' 
+                        }
                     }
                 },
                 { 
                     name: 'Play MP4', 
-                    desc: 'Search and get MP4 download links for top 5 results', 
+                    desc: 'Search and get MP4 downloads (Top 5)', 
                     status: 'active', 
-                    endpoint: '/api/v1/youtube/playmp4',
+                    endpoint: `${API_BASE_URL}/api/youtube/playmp4`,
                     method: 'GET',
                     params: { 
-                        q: 'Search query',
-                        quality: '360 (optional)'
+                        q: { 
+                            type: 'text', 
+                            label: 'Search Query', 
+                            placeholder: 'video name', 
+                            required: true 
+                        },
+                        quality: { 
+                            type: 'select', 
+                            label: 'Quality', 
+                            options: ['360', '480', '720'], 
+                            default: '360' 
+                        }
                     }
                 }
             ]
@@ -136,11 +181,57 @@ function ApiLibraryTab() {
         }))
         .filter(cat => cat.apis.length > 0);
 
+    const handleTestApi = async () => {
+        if (!userData || !userData.apiKey) {
+            alert('❌ API Key not found! Please check your profile.');
+            return;
+        }
+
+        setTestLoading(true);
+        setTestResult(null);
+
+        try {
+            const url = new URL(selectedEndpoint.endpoint);
+            const headers = { 'x-api-key': userData.apiKey };
+
+            if (selectedEndpoint.method === 'GET') {
+                Object.keys(testParams).forEach(key => {
+                    if (testParams[key]) {
+                        url.searchParams.append(key, testParams[key]);
+                    }
+                });
+
+                const response = await fetch(url.toString(), { headers });
+                const data = await response.json();
+                setTestResult({ status: response.status, data });
+            } else {
+                const response = await fetch(url.toString(), {
+                    method: 'POST',
+                    headers: { ...headers, 'Content-Type': 'application/json' },
+                    body: JSON.stringify(testParams)
+                });
+                const data = await response.json();
+                setTestResult({ status: response.status, data });
+            }
+
+            // Reload user data to show updated balance
+            await loadUserData();
+
+        } catch (error) {
+            setTestResult({ 
+                status: 0, 
+                data: { success: false, error: error.message } 
+            });
+        } finally {
+            setTestLoading(false);
+        }
+    };
+
     return (
         <>
             <div className="mb-8">
                 <h1 className="text-3xl font-bold mb-2">API Library</h1>
-                <p className="text-slate-400">Explore our comprehensive collection of APIs</p>
+                <p className="text-slate-400">Explore and test APIs with your API key</p>
             </div>
 
             <div className="bg-slate-900/80 backdrop-blur-xl rounded-2xl border border-slate-800 p-6 mb-8">
@@ -154,7 +245,7 @@ function ApiLibraryTab() {
                             placeholder="Search APIs..."
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
-                            className="w-full pl-10 pr-4 py-3 bg-slate-950/50 border border-slate-700 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none"
+                            className="w-full pl-10 pr-4 py-3 bg-slate-950/50 border border-slate-700 rounded-lg focus:ring-2 focus:ring-purple-500 outline-none"
                         />
                     </div>
                     <div className="flex flex-wrap gap-2">
@@ -163,9 +254,7 @@ function ApiLibraryTab() {
                                 key={cat}
                                 onClick={() => setSelectedCategory(cat)}
                                 className={`px-4 py-2 rounded-lg font-semibold transition-all ${
-                                    selectedCategory === cat 
-                                        ? 'bg-purple-600 text-white' 
-                                        : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
+                                    selectedCategory === cat ? 'bg-purple-600' : 'bg-slate-800 hover:bg-slate-700'
                                 }`}
                             >
                                 {cat}
@@ -183,34 +272,25 @@ function ApiLibraryTab() {
                             {category.apis.map((api, i) => (
                                 <div 
                                     key={i}
-                                    onClick={() => setSelectedEndpoint(api)}
+                                    onClick={() => { setSelectedEndpoint(api); setTestParams({}); setTestResult(null); }}
                                     className={`bg-slate-900/80 backdrop-blur-xl rounded-xl border p-6 hover:border-purple-500 transition-all cursor-pointer group ${
                                         api.featured ? 'border-yellow-500 ring-2 ring-yellow-500/30' : 'border-slate-800'
                                     }`}
                                 >
                                     {api.featured && (
-                                        <div className="flex items-center space-x-2 mb-2">
-                                            <span className="text-xs px-2 py-1 bg-yellow-500/10 text-yellow-400 border border-yellow-500/30 rounded-full font-bold">
-                                                ⭐ FEATURED
-                                            </span>
-                                        </div>
+                                        <span className="text-xs px-2 py-1 bg-yellow-500/10 text-yellow-400 border border-yellow-500/30 rounded-full font-bold mb-2 inline-block">
+                                            ⭐ FEATURED
+                                        </span>
                                     )}
-                                    <div className="flex items-start justify-between mb-3">
-                                        <h3 className="text-lg font-bold group-hover:text-purple-400 transition-colors">{api.name}</h3>
+                                    <h3 className="text-lg font-bold mb-2 group-hover:text-purple-400">{api.name}</h3>
+                                    <p className="text-slate-400 text-sm mb-4">{api.desc}</p>
+                                    <div className="flex items-center justify-between">
                                         <span className={`text-xs px-2 py-1 rounded-full ${
-                                            api.status === 'active' 
-                                                ? 'bg-green-500/10 text-green-400 border border-green-500/30' 
-                                                : 'bg-yellow-500/10 text-yellow-400 border border-yellow-500/30'
+                                            api.status === 'active' ? 'bg-green-500/10 text-green-400 border border-green-500/30' : 'bg-yellow-500/10 text-yellow-400'
                                         }`}>
                                             {api.status.toUpperCase()}
                                         </span>
-                                    </div>
-                                    <p className="text-slate-400 text-sm mb-4">{api.desc}</p>
-                                    <div className="flex items-center justify-between">
-                                        <span className="text-xs text-slate-500 font-mono">{api.endpoint}</span>
-                                        <svg className="w-5 h-5 text-purple-400 opacity-0 group-hover:opacity-100 transition-opacity" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
-                                        </svg>
+                                        <span className="text-xs px-2 py-1 bg-blue-500/10 text-blue-400 rounded font-mono">{api.method}</span>
                                     </div>
                                 </div>
                             ))}
@@ -219,10 +299,11 @@ function ApiLibraryTab() {
                 ))}
             </div>
 
-            {/* API Details Modal */}
+            {/* API Test Modal */}
             {selectedEndpoint && (
-                <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50" onClick={() => setSelectedEndpoint(null)}>
-                    <div className="bg-slate-900 rounded-2xl border border-slate-800 p-8 max-w-2xl w-full max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+                <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50 overflow-y-auto" onClick={() => setSelectedEndpoint(null)}>
+                    <div className="bg-slate-900 rounded-2xl border border-slate-800 p-6 sm:p-8 max-w-3xl w-full max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+                        
                         <div className="flex items-center justify-between mb-6">
                             <h2 className="text-2xl font-bold">{selectedEndpoint.name}</h2>
                             <button onClick={() => setSelectedEndpoint(null)} className="text-slate-400 hover:text-white">
@@ -234,69 +315,105 @@ function ApiLibraryTab() {
 
                         <p className="text-slate-400 mb-6">{selectedEndpoint.desc}</p>
 
-                        <div className="space-y-6">
-                            {/* Endpoint */}
-                            <div>
-                                <h3 className="font-bold mb-3 text-purple-400">Endpoint</h3>
-                                <div className="bg-slate-950/50 rounded-lg p-4 border border-slate-800">
-                                    <div className="flex items-center space-x-3">
-                                        <span className={`px-2 py-1 rounded text-xs font-bold ${
-                                            selectedEndpoint.method === 'GET' 
-                                                ? 'bg-green-500 text-black' 
-                                                : 'bg-blue-500 text-white'
-                                        }`}>
-                                            {selectedEndpoint.method}
-                                        </span>
-                                        <code className="text-purple-400">{selectedEndpoint.endpoint}</code>
-                                    </div>
+                        {/* Endpoint Info */}
+                        <div className="mb-6">
+                            <h3 className="font-bold mb-3 text-purple-400">Endpoint</h3>
+                            <div className="bg-slate-950/50 rounded-lg p-4 border border-slate-800">
+                                <div className="flex items-center space-x-3 mb-2">
+                                    <span className={`px-2 py-1 rounded text-xs font-bold ${
+                                        selectedEndpoint.method === 'GET' ? 'bg-green-500 text-black' : 'bg-blue-500 text-white'
+                                    }`}>
+                                        {selectedEndpoint.method}
+                                    </span>
+                                    <code className="text-purple-400 text-sm break-all">{selectedEndpoint.endpoint}</code>
                                 </div>
-                            </div>
-
-                            {/* Headers */}
-                            <div>
-                                <h3 className="font-bold mb-3 text-purple-400">Headers</h3>
-                                <div className="bg-slate-950/50 rounded-lg p-4 border border-slate-800 font-mono text-sm">
-                                    <div className="text-slate-400">
-                                        <span className="text-purple-400">x-api-key</span>: YOUR_API_KEY
-                                    </div>
-                                </div>
-                            </div>
-
-                            {/* Parameters */}
-                            {selectedEndpoint.params && (
-                                <div>
-                                    <h3 className="font-bold mb-3 text-purple-400">Parameters</h3>
-                                    <div className="bg-slate-950/50 rounded-lg p-4 border border-slate-800">
-                                        {Object.entries(selectedEndpoint.params).map(([key, value]) => (
-                                            <div key={key} className="mb-2 last:mb-0">
-                                                <span className="text-green-400 font-mono">{key}</span>
-                                                <span className="text-slate-500"> = </span>
-                                                <span className="text-slate-400">{value}</span>
-                                            </div>
-                                        ))}
-                                    </div>
-                                </div>
-                            )}
-
-                            {/* Example Request */}
-                            <div>
-                                <h3 className="font-bold mb-3 text-purple-400">Example Request</h3>
-                                <div className="bg-slate-950/50 rounded-lg p-4 border border-slate-800 font-mono text-sm overflow-x-auto">
-                                    <pre className="text-slate-400">{`curl -X ${selectedEndpoint.method} \\
-  '${selectedEndpoint.endpoint}${selectedEndpoint.params ? '?' + Object.keys(selectedEndpoint.params)[0] + '=value' : ''}' \\
-  -H 'x-api-key: YOUR_API_KEY'`}</pre>
-                                </div>
-                            </div>
-
-                            {/* Cost Notice */}
-                            <div className="flex items-center justify-between p-4 bg-yellow-500/10 border border-yellow-500/30 rounded-lg">
-                                <div>
-                                    <p className="font-semibold text-yellow-400">Cost per Request</p>
-                                    <p className="text-slate-400 text-sm">5 coins will be deducted</p>
-                                </div>
-                                <div className="text-2xl font-bold text-yellow-400">5 coins</div>
                             </div>
                         </div>
+
+                        {/* Test Parameters */}
+                        {selectedEndpoint.params && (
+                            <div className="mb-6">
+                                <h3 className="font-bold mb-3 text-purple-400">Test Parameters</h3>
+                                <div className="space-y-3">
+                                    {Object.entries(selectedEndpoint.params).map(([key, config]) => (
+                                        <div key={key}>
+                                            <label className="block text-slate-400 text-sm mb-2">
+                                                {config.label} {config.required && <span className="text-red-400">*</span>}
+                                            </label>
+                                            {config.type === 'select' ? (
+                                                <select
+                                                    value={testParams[key] || config.default || ''}
+                                                    onChange={(e) => setTestParams({...testParams, [key]: e.target.value})}
+                                                    className="w-full px-4 py-3 bg-slate-950/50 border border-slate-700 rounded-lg outline-none"
+                                                >
+                                                    {config.options.map(opt => (
+                                                        <option key={opt} value={opt}>{opt}</option>
+                                                    ))}
+                                                </select>
+                                            ) : (
+                                                <input
+                                                    type="text"
+                                                    placeholder={config.placeholder}
+                                                    value={testParams[key] || ''}
+                                                    onChange={(e) => setTestParams({...testParams, [key]: e.target.value})}
+                                                    className="w-full px-4 py-3 bg-slate-950/50 border border-slate-700 rounded-lg outline-none"
+                                                />
+                                            )}
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Test Button */}
+                        <div className="flex items-center justify-between p-4 bg-yellow-500/10 border border-yellow-500/30 rounded-lg mb-6">
+                            <div>
+                                <p className="font-semibold text-yellow-400">Cost: 5 coins</p>
+                                <p className="text-slate-400 text-sm">Your balance: {userData?.balance || 0} coins</p>
+                            </div>
+                            <button
+                                onClick={handleTestApi}
+                                disabled={testLoading || !userData?.apiKey}
+                                className="px-6 py-3 bg-purple-600 hover:bg-purple-700 rounded-lg font-semibold disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
+                            >
+                                {testLoading ? (
+                                    <>
+                                        <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                                        <span>Testing...</span>
+                                    </>
+                                ) : (
+                                    <>
+                                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                        </svg>
+                                        <span>Test API</span>
+                                    </>
+                                )}
+                            </button>
+                        </div>
+
+                        {/* Test Result */}
+                        {testResult && (
+                            <div className="mb-6">
+                                <h3 className="font-bold mb-3 text-purple-400">Response</h3>
+                                <div className={`bg-slate-950/50 rounded-lg p-4 border ${
+                                    testResult.status >= 200 && testResult.status < 300 ? 'border-green-500/30' : 'border-red-500/30'
+                                }`}>
+                                    <div className="flex items-center justify-between mb-2">
+                                        <span className={`text-sm font-bold ${
+                                            testResult.status >= 200 && testResult.status < 300 ? 'text-green-400' : 'text-red-400'
+                                        }`}>
+                                            Status: {testResult.status}
+                                        </span>
+                                    </div>
+                                    <pre className="text-slate-300 text-sm overflow-x-auto whitespace-pre-wrap">
+                                        {JSON.stringify(testResult.data, null, 2)}
+                                    </pre>
+                                </div>
+                            </div>
+                        )}
+
                     </div>
                 </div>
             )}
