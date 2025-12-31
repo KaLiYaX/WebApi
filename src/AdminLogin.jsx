@@ -1,5 +1,5 @@
 // FILE: src/AdminLogin.jsx
-// Admin Login - Google OAuth ONLY (kaliya.x.git@gmail.com ONLY)
+// Admin Login - Google OAuth ONLY for kaliya.x.git@gmail.com
 
 function AdminLogin({ onLogin }) {
     const [error, setError] = useState('');
@@ -12,33 +12,34 @@ function AdminLogin({ onLogin }) {
         try {
             const provider = new firebase.auth.GoogleAuthProvider();
             
-            // Force account selection every time
+            // Force account selection
             provider.setCustomParameters({
                 prompt: 'select_account'
             });
             
+            console.log('🔐 Starting Google sign-in...');
             const result = await window.firebaseAuth.signInWithPopup(provider);
             const user = result.user;
 
-            console.log('🔐 Admin login attempt:', user.email);
+            console.log('👤 User signed in:', user.email);
 
-            // ✅ CRITICAL: Check if email is EXACTLY kaliya.x.git@gmail.com
+            // ✅ CRITICAL CHECK: Only kaliya.x.git@gmail.com
             if (user.email === 'kaliya.x.git@gmail.com') {
-                console.log('✅ Admin access GRANTED for:', user.email);
-                onLogin();
+                console.log('✅ ADMIN ACCESS GRANTED');
+                onLogin(user.email);
             } else {
-                console.log('❌ Access DENIED for:', user.email);
+                console.log('❌ ACCESS DENIED for:', user.email);
                 
-                // Sign out unauthorized user immediately
+                // Sign out unauthorized user
                 await window.firebaseAuth.signOut();
                 
-                setError(`🚫 Access Denied! Only kaliya.x.git@gmail.com can access admin panel. You tried: ${user.email}`);
+                setError(`🚫 Access Denied!\n\nOnly kaliya.x.git@gmail.com can access the admin panel.\n\nYou tried to login with: ${user.email}`);
             }
         } catch (err) {
-            console.error('❌ Admin login error:', err);
+            console.error('❌ Login error:', err);
             
             if (err.code === 'auth/popup-closed-by-user') {
-                setError('⚠️ Sign-in cancelled by user');
+                setError('⚠️ Sign-in cancelled');
             } else if (err.code === 'auth/popup-blocked') {
                 setError('⚠️ Popup blocked! Please allow popups for this site.');
             } else if (err.code === 'auth/cancelled-popup-request') {
@@ -71,7 +72,7 @@ function AdminLogin({ onLogin }) {
                                 <svg className="w-5 h-5 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
                                     <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
                                 </svg>
-                                <span>{error}</span>
+                                <span className="whitespace-pre-line">{error}</span>
                             </div>
                         </div>
                     )}
@@ -84,8 +85,8 @@ function AdminLogin({ onLogin }) {
                             <div>
                                 <p className="text-blue-400 text-sm font-semibold mb-1">🔒 Restricted Access</p>
                                 <p className="text-blue-300 text-xs">
-                                    Only <strong>kaliya.x.git@gmail.com</strong> has admin privileges.<br/>
-                                    Other accounts will be <strong>automatically rejected</strong>.
+                                    Only <strong className="text-blue-200">kaliya.x.git@gmail.com</strong> has admin privileges.<br/>
+                                    Other accounts will be <strong className="text-blue-200">automatically rejected</strong>.
                                 </p>
                             </div>
                         </div>
