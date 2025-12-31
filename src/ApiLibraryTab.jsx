@@ -1,4 +1,4 @@
-// FILE: src/ApiLibraryTab.jsx - With Live Test Button
+// FILE: src/ApiLibraryTab.jsx - With Copy Response & Open URL Features
 
 function ApiLibraryTab() {
     const [searchQuery, setSearchQuery] = useState('');
@@ -8,6 +8,7 @@ function ApiLibraryTab() {
     const [testLoading, setTestLoading] = useState(false);
     const [testResult, setTestResult] = useState(null);
     const [userData, setUserData] = useState(null);
+    const [copiedResponse, setCopiedResponse] = useState(false);
 
     useEffect(() => {
         loadUserData();
@@ -40,7 +41,15 @@ function ApiLibraryTab() {
                     status: 'active', 
                     endpoint: `${API_BASE_URL}/api/perplexity-search`,
                     method: 'POST',
-                    featured: true
+                    featured: true,
+                    params: { 
+                        query: { 
+                            type: 'text', 
+                            label: 'Search Query', 
+                            placeholder: 'What is quantum computing?', 
+                            required: true 
+                        }
+                    }
                 }
             ]
         },
@@ -203,7 +212,7 @@ function ApiLibraryTab() {
 
                 const response = await fetch(url.toString(), { headers });
                 const data = await response.json();
-                setTestResult({ status: response.status, data });
+                setTestResult({ status: response.status, data, url: url.toString() });
             } else {
                 const response = await fetch(url.toString(), {
                     method: 'POST',
@@ -211,7 +220,7 @@ function ApiLibraryTab() {
                     body: JSON.stringify(testParams)
                 });
                 const data = await response.json();
-                setTestResult({ status: response.status, data });
+                setTestResult({ status: response.status, data, url: url.toString() });
             }
 
             // Reload user data to show updated balance
@@ -220,11 +229,36 @@ function ApiLibraryTab() {
         } catch (error) {
             setTestResult({ 
                 status: 0, 
-                data: { success: false, error: error.message } 
+                data: { success: false, error: error.message },
+                url: selectedEndpoint.endpoint
             });
         } finally {
             setTestLoading(false);
         }
+    };
+
+    const copyResponse = () => {
+        if (!testResult) return;
+        
+        const responseText = JSON.stringify(testResult.data, null, 2);
+        navigator.clipboard.writeText(responseText);
+        setCopiedResponse(true);
+        setTimeout(() => setCopiedResponse(false), 2000);
+    };
+
+    const openResponseUrl = () => {
+        if (!testResult || !testResult.url) return;
+        window.open(testResult.url, '_blank');
+    };
+
+    const extractDownloadUrl = (data) => {
+        // Extract download URL from response if available
+        if (data?.data?.download?.url) return data.data.download.url;
+        if (data?.download?.url) return data.download.url;
+        if (data?.data?.results && Array.isArray(data.data.results) && data.data.results[0]?.download?.url) {
+            return data.data.results[0].download.url;
+        }
+        return null;
     };
 
     return (
@@ -272,7 +306,7 @@ function ApiLibraryTab() {
                             {category.apis.map((api, i) => (
                                 <div 
                                     key={i}
-                                    onClick={() => { setSelectedEndpoint(api); setTestParams({}); setTestResult(null); }}
+                                    onClick={() => { setSelectedEndpoint(api); setTestParams({}); setTestResult(null); setCopiedResponse(false); }}
                                     className={`bg-slate-900/80 backdrop-blur-xl rounded-xl border p-6 hover:border-purple-500 transition-all cursor-pointer group ${
                                         api.featured ? 'border-yellow-500 ring-2 ring-yellow-500/30' : 'border-slate-800'
                                     }`}
@@ -396,7 +430,53 @@ function ApiLibraryTab() {
                         {/* Test Result */}
                         {testResult && (
                             <div className="mb-6">
-                                <h3 className="font-bold mb-3 text-purple-400">Response</h3>
+                                <div className="flex items-center justify-between mb-3">
+                                    <h3 className="font-bold text-purple-400">Response</h3>
+                                    <div className="flex items-center space-x-2">
+                                        <button
+                                            onClick={copyResponse}
+                                            className="px-3 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg text-sm font-semibold flex items-center space-x-2"
+                                        >
+                                            {copiedResponse ? (
+                                                <>
+                                                    <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                                                        <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                                                    </svg>
+                                                    <span>Copied!</span>
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                                                    </svg>
+                                                    <span>Copy</span>
+                                                </>
+                                            )}
+                                        </button>
+
+                                        {extractDownloadUrl(testResult.data) && (
+                                            <button
+                                                onClick={() => window.open(extractDownloadUrl(testResult.data), '_blank')}
+                                                className="px-3 py-2 bg-green-600 hover:bg-green-700 rounded-lg text-sm font-semibold flex items-center space-x-2"
+                                            >
+                                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                                                </svg>
+                                                <span>Download</span>
+                                            </button>
+                                        )}
+
+                                        <button
+                                            onClick={openResponseUrl}
+                                            className="px-3 py-2 bg-purple-600 hover:bg-purple-700 rounded-lg text-sm font-semibold flex items-center space-x-2"
+                                        >
+                                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                                            </svg>
+                                            <span>Open URL</span>
+                                        </button>
+                                    </div>
+                                </div>
                                 <div className={`bg-slate-950/50 rounded-lg p-4 border ${
                                     testResult.status >= 200 && testResult.status < 300 ? 'border-green-500/30' : 'border-red-500/30'
                                 }`}>
@@ -407,7 +487,7 @@ function ApiLibraryTab() {
                                             Status: {testResult.status}
                                         </span>
                                     </div>
-                                    <pre className="text-slate-300 text-sm overflow-x-auto whitespace-pre-wrap">
+                                    <pre className="text-slate-300 text-sm overflow-x-auto whitespace-pre-wrap max-h-96">
                                         {JSON.stringify(testResult.data, null, 2)}
                                     </pre>
                                 </div>
