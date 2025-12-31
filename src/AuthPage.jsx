@@ -1,19 +1,10 @@
-// FILE: src/AuthPage.jsx - OAuth Only Authentication (No Email/Password)
+// FILE: src/AuthPage.jsx - OAuth Only Authentication (NO REFERRAL SYSTEM)
 
 const { useState, useEffect } = React;
 
 function AuthPage() {
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
-    const [referralCode, setReferralCode] = useState('');
-
-    useEffect(() => {
-        const urlParams = new URLSearchParams(window.location.search);
-        const ref = urlParams.get('ref');
-        if (ref) {
-            setReferralCode(ref);
-        }
-    }, []);
 
     const generateProfilePicture = (userName) => {
         const initials = userName.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
@@ -51,14 +42,12 @@ function AuthPage() {
             if (!userDoc.exists) {
                 // New user - create account with bonuses
                 let welcomeBonus = 100;
-                let referralBonusAmount = 60;
 
                 try {
                     const settingsDoc = await window.firebaseDB.collection('settings').doc('system').get();
                     if (settingsDoc.exists) {
                         const settings = settingsDoc.data();
                         welcomeBonus = settings.welcomeBonus || 100;
-                        referralBonusAmount = settings.referralBonus || 60;
                     }
                 } catch (settingsError) {
                     console.warn('Using default bonus settings');
@@ -69,67 +58,18 @@ function AuthPage() {
 
                 const userName = user.displayName || user.email.split('@')[0];
                 const profilePicture = user.photoURL || generateProfilePicture(userName);
-                const userReferralCode = user.uid.substring(0, 8).toUpperCase();
 
-                let totalBonus = welcomeBonus;
-                let referrerId = null;
-
-                // Process referral code
-                if (referralCode && referralCode.trim() !== '') {
-                    try {
-                        const referrerQuery = await window.firebaseDB.collection('users')
-                            .where('referralCode', '==', referralCode.trim())
-                            .limit(1)
-                            .get();
-
-                        if (!referrerQuery.empty) {
-                            const referrerDoc = referrerQuery.docs[0];
-                            referrerId = referrerDoc.id;
-                            
-                            totalBonus += referralBonusAmount;
-
-                            // Give bonus to referrer
-                            await window.firebaseDB.collection('users').doc(referrerId).update({
-                                balance: firebase.firestore.FieldValue.increment(referralBonusAmount)
-                            });
-
-                            // Add transaction for referrer
-                            await window.firebaseDB.collection('users').doc(referrerId).collection('transactions').add({
-                                type: 'referral',
-                                amount: referralBonusAmount,
-                                from: user.email,
-                                description: `Referral bonus from ${user.email}`,
-                                timestamp: firebase.firestore.FieldValue.serverTimestamp()
-                            });
-
-                            // Notify referrer
-                            await window.firebaseDB.collection('users').doc(referrerId).collection('notifications').add({
-                                type: 'announcement',
-                                title: '🎉 Referral Bonus Earned!',
-                                message: `You earned ${referralBonusAmount} coins for referring ${user.email}!`,
-                                amount: 0,
-                                claimed: true,
-                                read: false,
-                                timestamp: firebase.firestore.FieldValue.serverTimestamp()
-                            });
-                        }
-                    } catch (refError) {
-                        console.error('Referral processing error:', refError);
-                    }
-                }
-
-                // Create new user
+                // Create new user (NO referral code)
                 await window.firebaseDB.collection('users').doc(user.uid).set({
                     name: userName,
                     email: user.email,
                     apiKey: apiKey,
-                    balance: totalBonus,
+                    balance: welcomeBonus,
                     profilePicture: profilePicture,
                     bio: '',
-                    referralCode: userReferralCode,
-                    referredBy: referrerId,
                     apiKeyPaused: false,
                     createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+                    lastClaimDate: null,  // For daily claim tracking
                     totalCalls: 0,
                     status: 'active',
                     emailVerified: true,
@@ -139,10 +79,8 @@ function AuthPage() {
                 // Add signup transaction
                 await window.firebaseDB.collection('users').doc(user.uid).collection('transactions').add({
                     type: 'signup_bonus',
-                    amount: totalBonus,
-                    description: referrerId 
-                        ? `Welcome bonus (${welcomeBonus}) + Referral bonus (${referralBonusAmount})` 
-                        : `Welcome bonus (${welcomeBonus})`,
+                    amount: welcomeBonus,
+                    description: `Welcome bonus (${welcomeBonus} coins)`,
                     timestamp: firebase.firestore.FieldValue.serverTimestamp()
                 });
 
@@ -150,12 +88,12 @@ function AuthPage() {
                 await window.firebaseDB.collection('users').doc(user.uid).collection('notifications').add({
                     type: 'announcement',
                     title: '🎉 Welcome to KaliyaX API!',
-                    message: `Account created! You received ${totalBonus} coins${referrerId ? ' (including referral bonus!)' : ''}`,
+                    message: `Account created! You received ${welcomeBonus} coins. Don't forget to claim your daily ${welcomeBonus} coins!`,
                     read: false,
                     timestamp: firebase.firestore.FieldValue.serverTimestamp()
                 });
 
-                console.log(`✅ New user created: ${user.email} with ${totalBonus} coins`);
+                console.log(`✅ New user created: ${user.email} with ${welcomeBonus} coins`);
             } else {
                 // Existing user - check if suspended
                 if (userDoc.data().status === 'suspended') {
@@ -222,20 +160,6 @@ function AuthPage() {
                             </div>
                         )}
 
-                        {referralCode && (
-                            <div className="mb-6 p-4 bg-green-500/10 border border-green-500/30 rounded-lg">
-                                <div className="flex items-center space-x-2">
-                                    <svg className="w-5 h-5 text-green-400" fill="currentColor" viewBox="0 0 20 20">
-                                        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                                    </svg>
-                                    <div>
-                                        <p className="text-green-400 font-semibold">🎉 Referral Code Applied!</p>
-                                        <p className="text-green-300 text-sm">You'll get 60 extra coins on signup</p>
-                                    </div>
-                                </div>
-                            </div>
-                        )}
-
                         <div className="space-y-3">
                             <button 
                                 onClick={() => handleOAuthLogin('google')}
@@ -251,7 +175,7 @@ function AuthPage() {
                                             <path fill="#4285F4" d="M12 20a7.48 7.48 0 0 0 5.26-1.93l-2.56-1.99A4.73 4.73 0 0 1 7.5 12H4.53v2.58A7.5 7.5 0 0 0 12 20z"/>
                                             <path fill="#FBBC05" d="M7.5 12a4.5 4.5 0 0 1 0-2.92V6.5H4.53a7.5 7.5 0 0 0 0 7.08z"/>
                                             <path fill="#34A853" d="M12 7.5c1.16 0 2.19.4 3.01 1.18l2.26-2.26A7.5 7.5 0 0 0 4.53 9.08L7.5 11.5A4.48 4.48 0 0 1 12 7.5z"/>
-                                        </svg>
+                        </svg>
                                         <span>Continue with Google</span>
                                     </>
                                 )}
@@ -305,7 +229,8 @@ function AuthPage() {
                     <div className="mt-6 text-center">
                         <div className="bg-blue-500/10 border border-blue-500/30 rounded-lg p-4">
                             <p className="text-blue-400 text-sm">
-                                ✨ Sign up now and get <span className="font-bold">100 coins</span> bonus!
+                                ✨ Sign up now and get <span className="font-bold">100 coins</span> bonus!<br/>
+                                🎁 Plus claim <span className="font-bold">100 coins daily</span>!
                             </p>
                         </div>
                     </div>
