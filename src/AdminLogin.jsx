@@ -1,5 +1,5 @@
 // FILE: src/AdminLogin.jsx
-// Admin Login - Google OAuth ONLY (kaliya.x.git@gmail.com)
+// Admin Login - Google OAuth ONLY (kaliya.x.git@gmail.com ONLY)
 
 function AdminLogin({ onLogin }) {
     const [error, setError] = useState('');
@@ -11,26 +11,38 @@ function AdminLogin({ onLogin }) {
 
         try {
             const provider = new firebase.auth.GoogleAuthProvider();
+            
+            // Force account selection every time
+            provider.setCustomParameters({
+                prompt: 'select_account'
+            });
+            
             const result = await window.firebaseAuth.signInWithPopup(provider);
             const user = result.user;
 
-            console.log('Admin login attempt:', user.email);
+            console.log('🔐 Admin login attempt:', user.email);
 
-            // ✅ Check if email is kaliya.x.git@gmail.com
+            // ✅ CRITICAL: Check if email is EXACTLY kaliya.x.git@gmail.com
             if (user.email === 'kaliya.x.git@gmail.com') {
-                console.log('✅ Admin access granted');
+                console.log('✅ Admin access GRANTED for:', user.email);
                 onLogin();
             } else {
-                console.log('❌ Access denied for:', user.email);
+                console.log('❌ Access DENIED for:', user.email);
+                
+                // Sign out unauthorized user immediately
                 await window.firebaseAuth.signOut();
-                setError('🚫 Access denied! Only KaliyaX can access admin panel.');
+                
+                setError(`🚫 Access Denied! Only kaliya.x.git@gmail.com can access admin panel. You tried: ${user.email}`);
             }
         } catch (err) {
-            console.error('Admin login error:', err);
+            console.error('❌ Admin login error:', err);
+            
             if (err.code === 'auth/popup-closed-by-user') {
-                setError('⚠️ Sign-in cancelled');
+                setError('⚠️ Sign-in cancelled by user');
             } else if (err.code === 'auth/popup-blocked') {
-                setError('⚠️ Popup blocked. Please allow popups for this site.');
+                setError('⚠️ Popup blocked! Please allow popups for this site.');
+            } else if (err.code === 'auth/cancelled-popup-request') {
+                setError('⚠️ Another popup is already open');
             } else {
                 setError(err.message || '❌ Login failed. Please try again.');
             }
@@ -54,11 +66,13 @@ function AdminLogin({ onLogin }) {
                     </div>
 
                     {error && (
-                        <div className="mb-6 p-4 bg-red-500/10 border border-red-500/30 rounded-lg text-red-400 text-sm flex items-start space-x-3 animate-fade-in">
-                            <svg className="w-5 h-5 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
-                                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
-                            </svg>
-                            <span>{error}</span>
+                        <div className="mb-6 p-4 bg-red-500/10 border border-red-500/30 rounded-lg text-red-400 text-sm animate-fade-in">
+                            <div className="flex items-start space-x-3">
+                                <svg className="w-5 h-5 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                                </svg>
+                                <span>{error}</span>
+                            </div>
                         </div>
                     )}
 
@@ -68,9 +82,10 @@ function AdminLogin({ onLogin }) {
                                 <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
                             </svg>
                             <div>
-                                <p className="text-blue-400 text-sm font-semibold mb-1">🔒 Admin Access Only</p>
+                                <p className="text-blue-400 text-sm font-semibold mb-1">🔒 Restricted Access</p>
                                 <p className="text-blue-300 text-xs">
-                                    Only <strong>kaliya.x.git@gmail.com</strong> account has admin privileges
+                                    Only <strong>kaliya.x.git@gmail.com</strong> has admin privileges.<br/>
+                                    Other accounts will be <strong>automatically rejected</strong>.
                                 </p>
                             </div>
                         </div>
@@ -84,7 +99,7 @@ function AdminLogin({ onLogin }) {
                         {loading ? (
                             <>
                                 <div className="w-5 h-5 border-2 border-gray-400 border-t-transparent rounded-full animate-spin"></div>
-                                <span>Signing in...</span>
+                                <span>Authenticating...</span>
                             </>
                         ) : (
                             <>
@@ -114,7 +129,7 @@ function AdminLogin({ onLogin }) {
                         <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
                             <path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" />
                         </svg>
-                        <span>Secure admin access</span>
+                        <span>Secure admin authentication</span>
                     </div>
                 </div>
             </div>
