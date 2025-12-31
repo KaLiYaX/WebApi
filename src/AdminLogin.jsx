@@ -1,31 +1,42 @@
 // FILE: src/AdminLogin.jsx
-// Admin Login Component - Username/Password Authentication
+// Admin Login with Firebase Email/Password Authentication
 
 const { useState } = React;
 
 function AdminLogin({ onLogin }) {
-    const [username, setUsername] = useState('');
+    const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
 
-    // Admin credentials
-    const ADMIN_USERNAME = 'KaliyaX';
-    const ADMIN_PASSWORD = '@kx200';
-
-    const handleLogin = (e) => {
+    const handleLogin = async (e) => {
         e.preventDefault();
         setError('');
         setLoading(true);
 
-        setTimeout(() => {
-            if (username === ADMIN_USERNAME && password === ADMIN_PASSWORD) {
-                onLogin();
-            } else {
-                setError('Invalid admin credentials!');
+        try {
+            // Firebase email/password login
+            const result = await window.firebaseAuth.signInWithEmailAndPassword(email, password);
+            console.log('✅ Login successful:', result.user.email);
+            onLogin(result.user.email);
+        } catch (err) {
+            console.error('❌ Login error:', err);
+            
+            let errorMessage = 'Login failed!';
+            if (err.code === 'auth/wrong-password') {
+                errorMessage = 'Invalid password!';
+            } else if (err.code === 'auth/user-not-found') {
+                errorMessage = 'Admin account not found!';
+            } else if (err.code === 'auth/invalid-email') {
+                errorMessage = 'Invalid email format!';
+            } else if (err.code === 'auth/too-many-requests') {
+                errorMessage = 'Too many failed attempts. Try again later.';
             }
+            
+            setError(errorMessage);
+        } finally {
             setLoading(false);
-        }, 500);
+        }
     };
 
     return (
@@ -53,15 +64,16 @@ function AdminLogin({ onLogin }) {
 
                     <form onSubmit={handleLogin} className="space-y-4">
                         <div>
-                            <label className="block text-slate-400 text-sm mb-2">Username</label>
+                            <label className="block text-slate-400 text-sm mb-2">Email</label>
                             <input 
-                                type="text" 
-                                placeholder="Enter username" 
-                                value={username}
-                                onChange={(e) => setUsername(e.target.value)}
+                                type="email" 
+                                placeholder="admin@kaliyax.com" 
+                                value={email}
+                                onChange={(e) => setEmail(e.target.value)}
                                 className="w-full px-4 py-3 bg-slate-800/50 border border-slate-700 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none text-white"
                                 disabled={loading}
-                                autoComplete="username"
+                                required
+                                autoComplete="email"
                             />
                         </div>
                         <div>
@@ -71,9 +83,9 @@ function AdminLogin({ onLogin }) {
                                 placeholder="Enter password" 
                                 value={password}
                                 onChange={(e) => setPassword(e.target.value)}
-                                onKeyPress={(e) => e.key === 'Enter' && handleLogin(e)}
                                 className="w-full px-4 py-3 bg-slate-800/50 border border-slate-700 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none text-white"
                                 disabled={loading}
+                                required
                                 autoComplete="current-password"
                             />
                         </div>
@@ -106,7 +118,8 @@ function AdminLogin({ onLogin }) {
                 </div>
 
                 <div className="mt-6 text-center text-slate-400 text-sm">
-                    <p>Admin access only</p>
+                    <p>⚠️ Admin access only</p>
+                    <p className="mt-2 text-xs">Default: kaliya.x.git@gmail.com</p>
                 </div>
             </div>
         </div>
