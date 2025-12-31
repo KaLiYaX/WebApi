@@ -28,28 +28,32 @@
     ],
     "rewrites": [
       {
-        "source": "**",
-        "destination": "/index.html"
-      }
-    ],
-    "headers": [
-      {
-        "source": "**/*.@(jpg|jpeg|gif|png|svg|webp)",
-        "headers": [
-          {
-            "key": "Cache-Control",
-            "value": "max-age=7200"
-          }
-        ]
+        "source": "/api/v1/youtube/search",
+        "function": "ytSearch"
       },
       {
-        "source": "**/*.@(js|css)",
-        "headers": [
-          {
-            "key": "Cache-Control",
-            "value": "max-age=3600"
-          }
-        ]
+        "source": "/api/v1/youtube/mp3",
+        "function": "ytmp3"
+      },
+      {
+        "source": "/api/v1/youtube/mp4",
+        "function": "ytmp4"
+      },
+      {
+        "source": "/api/v1/youtube/transcript",
+        "function": "ytTranscript"
+      },
+      {
+        "source": "/api/v1/youtube/playmp3",
+        "function": "playmp3"
+      },
+      {
+        "source": "/api/v1/youtube/playmp4",
+        "function": "playmp4"
+      },
+      {
+        "source": "**",
+        "destination": "/index.html"
       }
     ]
   }
