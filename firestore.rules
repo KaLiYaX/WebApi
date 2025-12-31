@@ -1,46 +1,59 @@
-// FILE: firestore.rules (UPDATED WITH PROPER PERMISSIONS)
+// FILE: firestore.rules (FIXED VERSION - Transfer Coins Working)
 
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     
-    // Users collection - Read access for all authenticated users (for transfers)
+    // Helper function to check if user is authenticated
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    // Helper function to check if user is the owner
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+    
+    // Users collection - READ access for all authenticated users (needed for transfers)
     match /users/{userId} {
-      // Anyone authenticated can read user data (needed for transfer recipient lookup)
-      allow read: if request.auth != null;
+      // ✅ CRITICAL: Anyone authenticated can READ user data (for transfer recipient lookup)
+      allow read: if isAuthenticated();
       
-      // Only the user themselves can write their own data
-      allow write: if request.auth != null && request.auth.uid == userId;
+      // Only the user can update their own data
+      allow update: if isOwner(userId);
+      
+      // Only the user can delete their own data
+      allow delete: if isOwner(userId);
       
       // Anyone authenticated can create new users (signup)
-      allow create: if request.auth != null;
+      allow create: if isAuthenticated();
       
       // Transactions subcollection
       match /transactions/{transactionId} {
-        allow read: if request.auth != null && request.auth.uid == userId;
-        allow create: if request.auth != null && request.auth.uid == userId;
+        allow read: if isOwner(userId);
+        allow create: if isOwner(userId);
         allow update, delete: if false; // Transactions are immutable
       }
       
       // Notifications subcollection
       match /notifications/{notificationId} {
-        allow read: if request.auth != null && request.auth.uid == userId;
-        allow create: if request.auth != null; // Admin can create
-        allow update: if request.auth != null && request.auth.uid == userId;
-        allow delete: if request.auth != null && request.auth.uid == userId;
+        allow read: if isOwner(userId);
+        allow create: if isAuthenticated(); // Admin can create notifications
+        allow update: if isOwner(userId);
+        allow delete: if isOwner(userId);
       }
     }
     
-    // API calls logging (if needed)
+    // API calls logging
     match /api_calls/{callId} {
-      allow create: if request.auth != null;
-      allow read: if request.auth != null;
+      allow create: if isAuthenticated();
+      allow read: if isAuthenticated();
     }
     
-    // System settings - Anyone can read/write (for admin panel)
+    // System settings - Public read, authenticated write
     match /settings/{document} {
       allow read: if true;
-      allow write: if true; // In production, restrict to admin only
+      allow write: if isAuthenticated();
     }
     
     // Verification codes (if using email verification)
