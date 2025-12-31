@@ -1,5 +1,5 @@
 // FILE: src/OverviewTab.jsx
-// Overview Tab Component - NO TRANSFER, NO REFERRAL, WITH DAILY CLAIM
+// Overview Tab Component - NO TRANSFER, NO REFERRAL, WITH DAILY CLAIM (API Docs Section Removed)
 
 function OverviewTab({ userData, user, copied, copyApiKey, regenerateApiKey, toggleApiKeyPause }) {
     const [apiCost, setApiCost] = useState(5);
@@ -240,58 +240,87 @@ function OverviewTab({ userData, user, copied, copyApiKey, regenerateApiKey, tog
             </div>
 
             <div className="grid md:grid-cols-2 gap-6 mb-8">
+                {/* API Credentials */}
                 <div className="bg-slate-900/80 backdrop-blur-xl rounded-2xl border border-slate-800 p-6">
-                    <div className="flex items-center justify-between mb-4">
-                        <h2 className="text-xl font-bold flex items-center space-x-2">
-                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
-                            </svg>
-                            <span>API Credentials</span>
-                        </h2>
-                        <span className={`text-sm px-3 py-1 rounded-full border ${userData?.apiKeyPaused ? 'text-orange-400 bg-orange-500/10 border-orange-500/30' : 'text-green-400 bg-green-500/10 border-green-500/30'}`}>
-                            {copied ? 'Copied!' : (userData?.apiKeyPaused ? 'Paused' : 'Active')}
-                        </span>
-                    </div>
-                    <div className="bg-slate-950/50 rounded-lg p-4 mb-4 font-mono text-sm break-all border border-slate-800">
-                        {userData?.apiKey || 'Loading...'}
-                    </div>
-                    <p className="text-slate-400 text-sm mb-4">
-                        Include in header: <code className="bg-slate-800 px-2 py-1 rounded text-purple-400">x-api-key</code>
-                    </p>
-                    <div className="flex flex-wrap gap-3">
-                        <button onClick={copyApiKey} className="flex items-center space-x-2 px-4 py-2 bg-purple-600 hover:bg-purple-700 rounded-lg transition-colors">
-                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                            </svg>
-                            <span>{copied ? 'Copied!' : 'Copy'}</span>
-                        </button>
-                        <button onClick={regenerateApiKey} className="flex items-center space-x-2 px-4 py-2 bg-slate-800 hover:bg-slate-700 rounded-lg transition-colors border border-slate-700">
-                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                            </svg>
-                            <span>Regenerate</span>
-                        </button>
-                        <button onClick={toggleApiKeyPause} className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors border ${userData?.apiKeyPaused ? 'bg-green-600 hover:bg-green-700 border-green-700' : 'bg-orange-600 hover:bg-orange-700 border-orange-700'}`}>
-                            <span>{userData?.apiKeyPaused ? 'Resume' : 'Pause'}</span>
-                        </button>
-                    </div>
+                <div className="flex items-center justify-between mb-4">
+                    <h2 className="text-xl font-bold flex items-center space-x-2">
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
+                        </svg>
+                        <span>API Credentials</span>
+                    </h2>
+                    <span className={`text-sm px-3 py-1 rounded-full border ${userData?.apiKeyPaused ? 'text-orange-400 bg-orange-500/10 border-orange-500/30' : 'text-green-400 bg-green-500/10 border-green-500/30'}`}>
+                        {copied ? 'Copied!' : (userData?.apiKeyPaused ? 'Paused' : 'Active')}
+                    </span>
                 </div>
+                <div className="bg-slate-950/50 rounded-lg p-4 mb-4 font-mono text-sm break-all border border-slate-800">
+                    {userData?.apiKey || 'Loading...'}
+                </div>
+                <p className="text-slate-400 text-sm mb-4">
+                    Include in header: <code className="bg-slate-800 px-2 py-1 rounded text-purple-400">x-api-key</code>
+                </p>
+                <div className="flex flex-wrap gap-3">
+                    <button onClick={copyApiKey} className="flex items-center space-x-2 px-4 py-2 bg-purple-600 hover:bg-purple-700 rounded-lg transition-colors">
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                        </svg>
+                        <span>{copied ? 'Copied!' : 'Copy'}</span>
+                    </button>
+                    <button onClick={regenerateApiKey} className="flex items-center space-x-2 px-4 py-2 bg-slate-800 hover:bg-slate-700 rounded-lg transition-colors border border-slate-700">
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                        </svg>
+                        <span>Regenerate</span>
+                    </button>
+                    <button onClick={toggleApiKeyPause} className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors border ${userData?.apiKeyPaused ? 'bg-green-600 hover:bg-green-700 border-green-700' : 'bg-orange-600 hover:bg-orange-700 border-orange-700'}`}>
+                        <span>{userData?.apiKeyPaused ? 'Resume' : 'Pause'}</span>
+                    </button>
+                </div>
+            </div>
 
-                <div className="bg-gradient-to-br from-purple-900/50 to-pink-900/50 rounded-2xl border border-purple-700/50 p-6">
-                    <h2 className="text-xl font-bold mb-4">📚 API Documentation</h2>
-                    <p className="text-slate-300 text-sm mb-6">
-                        Learn how to integrate KaliyaX APIs into your projects with our comprehensive documentation.
-                    </p>
-                    <div className="space-y-3">
-                        <a href="https://docs.kaliyax.com" target="_blank" className="block w-full py-3 bg-purple-600 hover:bg-purple-700 rounded-lg font-semibold text-center transition-all">
-                            View Documentation
-                        </a>
-                        <a href="https://status.kaliyax.com" target="_blank" className="block w-full py-3 bg-slate-800 hover:bg-slate-700 rounded-lg font-semibold text-center transition-all border border-slate-700">
-                            API Status
-                        </a>
+            {/* API Status Section */}
+            <div className="bg-gradient-to-br from-blue-900/50 to-indigo-900/50 rounded-2xl border border-blue-700/50 p-6">
+                <h2 className="text-xl font-bold mb-4 flex items-center space-x-2">
+                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <span>API Status & Health</span>
+                </h2>
+                <p className="text-blue-300 text-sm mb-6">
+                    Monitor the real-time status of all KaliyaX API services
+                </p>
+                <div className="space-y-3">
+                    <a 
+                        href="https://status.kaliyax.com" 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="w-full py-3 bg-blue-600 hover:bg-blue-700 rounded-lg font-semibold text-center transition-all flex items-center justify-center space-x-2"
+                    >
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        <span>View API Status</span>
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                        </svg>
+                    </a>
+                    <div className="grid grid-cols-3 gap-3 text-center">
+                        <div className="bg-green-500/10 border border-green-500/30 rounded-lg p-3">
+                            <div className="text-green-400 font-bold text-lg">99.9%</div>
+                            <div className="text-slate-400 text-xs">Uptime</div>
+                        </div>
+                        <div className="bg-blue-500/10 border border-blue-500/30 rounded-lg p-3">
+                            <div className="text-blue-400 font-bold text-lg">~50ms</div>
+                            <div className="text-slate-400 text-xs">Response</div>
+                        </div>
+                        <div className="bg-purple-500/10 border border-purple-500/30 rounded-lg p-3">
+                            <div className="text-purple-400 font-bold text-lg">24/7</div>
+                            <div className="text-slate-400 text-xs">Support</div>
+                        </div>
                     </div>
                 </div>
             </div>
+        </div>
 
             <div className="bg-slate-900/80 backdrop-blur-xl rounded-2xl border border-slate-800 p-6 mb-8">
                 <h2 className="text-xl font-bold mb-2">Coin Packages</h2>
