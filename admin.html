@@ -43,8 +43,31 @@
 <body>
     <div id="admin-root"></div>
     
-    <!-- Firebase Config -->
-    <script type="text/babel" src="./src/config/firebase.js"></script>
+    <!-- Firebase Config (Same as main app) -->
+    <script type="text/babel">
+        const firebaseConfig = {
+            apiKey: "AIzaSyCdYlIF1-Zx1TpuiQnnScykdrlEqJYj2MA",
+            authDomain: "kaliyax.firebaseapp.com",
+            projectId: "kaliyax",
+            storageBucket: "kaliyax.firebasestorage.app",
+            messagingSenderId: "46921532670",
+            appId: "1:46921532670:web:af7ff28d4b7152b6f0d1af",
+            measurementId: "G-ENGL9B80X2"
+        };
+
+        // Initialize Firebase
+        if (!firebase.apps.length) {
+            firebase.initializeApp(firebaseConfig);
+        }
+
+        const auth = firebase.auth();
+        const db = firebase.firestore();
+
+        window.firebaseAuth = auth;
+        window.firebaseDB = db;
+
+        console.log('✅ Admin Firebase initialized');
+    </script>
     
     <!-- Admin Components -->
     <script type="text/babel" src="./src/AdminPanel.jsx"></script>
@@ -57,23 +80,85 @@
         function AdminApp() {
             const [isAdminLoggedIn, setIsAdminLoggedIn] = useState(false);
             const [loading, setLoading] = useState(true);
+            const [adminEmail, setAdminEmail] = useState(null);
 
             useEffect(() => {
-                const adminSession = sessionStorage.getItem('kaliyax_admin_session');
-                if (adminSession === 'true') {
-                    setIsAdminLoggedIn(true);
-                }
-                setLoading(false);
+                // Check if there's an admin session
+                const checkAdminSession = () => {
+                    const adminSession = sessionStorage.getItem('kaliyax_admin_session');
+                    const storedEmail = sessionStorage.getItem('kaliyax_admin_email');
+                    
+                    console.log('🔍 Checking admin session:', { adminSession, storedEmail });
+                    
+                    // CRITICAL: Only allow kaliya.x.git@gmail.com
+                    if (adminSession === 'true' && storedEmail === 'kaliya.x.git@gmail.com') {
+                        setIsAdminLoggedIn(true);
+                        setAdminEmail(storedEmail);
+                        console.log('✅ Admin session valid');
+                    } else {
+                        // Clear invalid sessions
+                        sessionStorage.removeItem('kaliyax_admin_session');
+                        sessionStorage.removeItem('kaliyax_admin_email');
+                        setIsAdminLoggedIn(false);
+                        console.log('❌ No valid admin session');
+                    }
+                    
+                    setLoading(false);
+                };
+
+                // Listen to Firebase auth changes
+                const unsubscribe = window.firebaseAuth.onAuthStateChanged((user) => {
+                    console.log('🔐 Auth state changed:', user?.email);
+                    
+                    if (user && user.email === 'kaliya.x.git@gmail.com') {
+                        // Valid admin
+                        sessionStorage.setItem('kaliyax_admin_session', 'true');
+                        sessionStorage.setItem('kaliyax_admin_email', user.email);
+                        setIsAdminLoggedIn(true);
+                        setAdminEmail(user.email);
+                        console.log('✅ Admin authenticated:', user.email);
+                    } else if (user && user.email !== 'kaliya.x.git@gmail.com') {
+                        // Wrong email - sign out
+                        console.log('❌ Unauthorized email:', user.email);
+                        window.firebaseAuth.signOut();
+                        sessionStorage.removeItem('kaliyax_admin_session');
+                        sessionStorage.removeItem('kaliyax_admin_email');
+                        setIsAdminLoggedIn(false);
+                        alert(`Access Denied! Only kaliya.x.git@gmail.com can access admin panel.\n\nYou tried: ${user.email}`);
+                    } else {
+                        // No user
+                        sessionStorage.removeItem('kaliyax_admin_session');
+                        sessionStorage.removeItem('kaliyax_admin_email');
+                        setIsAdminLoggedIn(false);
+                    }
+                    
+                    setLoading(false);
+                });
+
+                checkAdminSession();
+
+                return () => unsubscribe();
             }, []);
 
-            const handleAdminLogin = () => {
+            const handleAdminLogin = (email) => {
+                console.log('✅ Admin login successful:', email);
                 sessionStorage.setItem('kaliyax_admin_session', 'true');
+                sessionStorage.setItem('kaliyax_admin_email', email);
                 setIsAdminLoggedIn(true);
+                setAdminEmail(email);
             };
 
-            const handleAdminLogout = () => {
+            const handleAdminLogout = async () => {
+                console.log('🔓 Admin logging out');
+                try {
+                    await window.firebaseAuth.signOut();
+                } catch (error) {
+                    console.error('Logout error:', error);
+                }
                 sessionStorage.removeItem('kaliyax_admin_session');
+                sessionStorage.removeItem('kaliyax_admin_email');
                 setIsAdminLoggedIn(false);
+                setAdminEmail(null);
             };
 
             if (loading) {
@@ -81,14 +166,16 @@
                     <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 flex items-center justify-center">
                         <div className="text-white text-center">
                             <div className="w-16 h-16 border-4 border-red-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-                            <p className="text-xl">Loading...</p>
+                            <p className="text-xl">Loading admin panel...</p>
                         </div>
                     </div>
                 );
             }
 
-            return isAdminLoggedIn ? (
-                <AdminPanel onLogout={handleAdminLogout} />
+            console.log('🎨 Rendering:', { isAdminLoggedIn, adminEmail });
+
+            return isAdminLoggedIn && adminEmail === 'kaliya.x.git@gmail.com' ? (
+                <AdminPanel onLogout={handleAdminLogout} adminEmail={adminEmail} />
             ) : (
                 <AdminLogin onLogin={handleAdminLogin} />
             );
