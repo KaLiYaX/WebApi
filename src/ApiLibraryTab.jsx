@@ -1,4 +1,4 @@
-// FILE: src/ApiLibraryTab.jsx - Updated with Perplexity AI
+// FILE: src/ApiLibraryTab.jsx - Updated with YouTube APIs
 
 function ApiLibraryTab() {
     const [searchQuery, setSearchQuery] = useState('');
@@ -49,9 +49,75 @@ function ApiLibraryTab() {
             apis: [
                 { name: 'Instagram Data', desc: 'Get Instagram profile information', status: 'active', endpoint: '/api/v1/instagram', method: 'GET' },
                 { name: 'Twitter Scraper', desc: 'Extract Twitter data and tweets', status: 'active', endpoint: '/api/v1/twitter', method: 'GET' },
-                { name: 'YouTube Stats', desc: 'YouTube video statistics and data', status: 'active', endpoint: '/api/v1/youtube', method: 'GET' },
-                { name: 'TikTok Info', desc: 'TikTok video information', status: 'beta', endpoint: '/api/v1/tiktok', method: 'GET' },
-                { name: 'Facebook Graph', desc: 'Facebook Graph API access', status: 'active', endpoint: '/api/v1/facebook', method: 'GET' }
+                { name: 'Facebook Graph', desc: 'Facebook Graph API access', status: 'active', endpoint: '/api/v1/facebook', method: 'GET' },
+                { name: 'TikTok Info', desc: 'TikTok video information', status: 'beta', endpoint: '/api/v1/tiktok', method: 'GET' }
+            ]
+        },
+        { 
+            category: 'YouTube', 
+            apis: [
+                { 
+                    name: 'YouTube Search', 
+                    desc: 'Search for YouTube videos by query', 
+                    status: 'active', 
+                    endpoint: '/api/v1/youtube/search',
+                    method: 'GET',
+                    featured: true,
+                    params: { q: 'Search query' }
+                },
+                { 
+                    name: 'YouTube MP3 Download', 
+                    desc: 'Download YouTube videos as MP3 audio files', 
+                    status: 'active', 
+                    endpoint: '/api/v1/youtube/mp3',
+                    method: 'GET',
+                    featured: true,
+                    params: { 
+                        url: 'YouTube video URL',
+                        quality: '128 (optional: 32, 64, 96, 128, 160, 192, 256, 320)'
+                    }
+                },
+                { 
+                    name: 'YouTube MP4 Download', 
+                    desc: 'Download YouTube videos as MP4 video files', 
+                    status: 'active', 
+                    endpoint: '/api/v1/youtube/mp4',
+                    method: 'GET',
+                    params: { 
+                        url: 'YouTube video URL',
+                        quality: '360 (optional: 144, 240, 360, 480, 720, 1080, 1440)'
+                    }
+                },
+                { 
+                    name: 'YouTube Transcript', 
+                    desc: 'Get video transcript with AI summarization', 
+                    status: 'active', 
+                    endpoint: '/api/v1/youtube/transcript',
+                    method: 'GET',
+                    params: { url: 'YouTube video URL' }
+                },
+                { 
+                    name: 'Play MP3', 
+                    desc: 'Search and get MP3 download links for top 5 results', 
+                    status: 'active', 
+                    endpoint: '/api/v1/youtube/playmp3',
+                    method: 'GET',
+                    params: { 
+                        q: 'Search query',
+                        quality: '128 (optional)'
+                    }
+                },
+                { 
+                    name: 'Play MP4', 
+                    desc: 'Search and get MP4 download links for top 5 results', 
+                    status: 'active', 
+                    endpoint: '/api/v1/youtube/playmp4',
+                    method: 'GET',
+                    params: { 
+                        q: 'Search query',
+                        quality: '360 (optional)'
+                    }
+                }
             ]
         }
     ];
@@ -153,6 +219,7 @@ function ApiLibraryTab() {
                 ))}
             </div>
 
+            {/* API Details Modal */}
             {selectedEndpoint && (
                 <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50" onClick={() => setSelectedEndpoint(null)}>
                     <div className="bg-slate-900 rounded-2xl border border-slate-800 p-8 max-w-2xl w-full max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
@@ -168,6 +235,7 @@ function ApiLibraryTab() {
                         <p className="text-slate-400 mb-6">{selectedEndpoint.desc}</p>
 
                         <div className="space-y-6">
+                            {/* Endpoint */}
                             <div>
                                 <h3 className="font-bold mb-3 text-purple-400">Endpoint</h3>
                                 <div className="bg-slate-950/50 rounded-lg p-4 border border-slate-800">
@@ -184,6 +252,7 @@ function ApiLibraryTab() {
                                 </div>
                             </div>
 
+                            {/* Headers */}
                             <div>
                                 <h3 className="font-bold mb-3 text-purple-400">Headers</h3>
                                 <div className="bg-slate-950/50 rounded-lg p-4 border border-slate-800 font-mono text-sm">
@@ -193,60 +262,33 @@ function ApiLibraryTab() {
                                 </div>
                             </div>
 
-                            {selectedEndpoint.name === 'Perplexity AI Search' && (
-                                <>
-                                    <div>
-                                        <h3 className="font-bold mb-3 text-purple-400">Request Body (JSON)</h3>
-                                        <div className="bg-slate-950/50 rounded-lg p-4 border border-slate-800 font-mono text-sm overflow-x-auto">
-                                            <pre className="text-slate-400">{`{
-  "query": "What are the latest AI developments?",
-  "source": {
-    "web": true,
-    "academic": false,
-    "social": false,
-    "finance": false
-  }
-}`}</pre>
-                                        </div>
-                                    </div>
-
-                                    <div>
-                                        <h3 className="font-bold mb-3 text-purple-400">Example Response</h3>
-                                        <div className="bg-slate-950/50 rounded-lg p-4 border border-slate-800 font-mono text-sm overflow-x-auto">
-                                            <pre className="text-slate-400">{`{
-  "success": true,
-  "data": {
-    "answer": "AI answer here...",
-    "search_results": [...],
-    "query": "your query",
-    "sources_used": ["web"]
-  },
-  "usage": {
-    "coins_used": 5,
-    "remaining_balance": 95
-  },
-  "timestamp": "2025-12-30T..."
-}`}</pre>
-                                        </div>
-                                    </div>
-                                </>
-                            )}
-
-                            {selectedEndpoint.name !== 'Perplexity AI Search' && (
+                            {/* Parameters */}
+                            {selectedEndpoint.params && (
                                 <div>
-                                    <h3 className="font-bold mb-3 text-purple-400">Example Response</h3>
-                                    <div className="bg-slate-950/50 rounded-lg p-4 border border-slate-800 font-mono text-sm overflow-x-auto">
-                                        <pre className="text-slate-400">{`{
-  "status": "success",
-  "data": {
-    "result": "..."
-  },
-  "credits_used": 5
-}`}</pre>
+                                    <h3 className="font-bold mb-3 text-purple-400">Parameters</h3>
+                                    <div className="bg-slate-950/50 rounded-lg p-4 border border-slate-800">
+                                        {Object.entries(selectedEndpoint.params).map(([key, value]) => (
+                                            <div key={key} className="mb-2 last:mb-0">
+                                                <span className="text-green-400 font-mono">{key}</span>
+                                                <span className="text-slate-500"> = </span>
+                                                <span className="text-slate-400">{value}</span>
+                                            </div>
+                                        ))}
                                     </div>
                                 </div>
                             )}
 
+                            {/* Example Request */}
+                            <div>
+                                <h3 className="font-bold mb-3 text-purple-400">Example Request</h3>
+                                <div className="bg-slate-950/50 rounded-lg p-4 border border-slate-800 font-mono text-sm overflow-x-auto">
+                                    <pre className="text-slate-400">{`curl -X ${selectedEndpoint.method} \\
+  '${selectedEndpoint.endpoint}${selectedEndpoint.params ? '?' + Object.keys(selectedEndpoint.params)[0] + '=value' : ''}' \\
+  -H 'x-api-key: YOUR_API_KEY'`}</pre>
+                                </div>
+                            </div>
+
+                            {/* Cost Notice */}
                             <div className="flex items-center justify-between p-4 bg-yellow-500/10 border border-yellow-500/30 rounded-lg">
                                 <div>
                                     <p className="font-semibold text-yellow-400">Cost per Request</p>
