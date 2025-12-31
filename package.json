@@ -2,11 +2,10 @@
   "name": "kaliyax-api-portal",
   "version": "1.0.0",
   "description": "Professional API Portal with Firebase Authentication",
-  "main": "index.html",
+  "main": "index.js",
   "scripts": {
-    "start": "live-server --port=3000",
-    "dev": "live-server --port=3000",
-    "serve": "firebase emulators:start --only functions",
+    "start": "node index.js",
+    "dev": "node index.js",
     "deploy": "firebase deploy",
     "deploy:hosting": "firebase deploy --only hosting",
     "deploy:functions": "firebase deploy --only functions",
@@ -27,7 +26,11 @@
     "firebase-functions": "^4.3.1",
     "nodemailer": "^6.9.7",
     "react": "^18.2.0",
-    "react-dom": "^18.2.0"
+    "react-dom": "^18.2.0",
+    "axios": "^1.7.8",
+    "express": "^4.19.2",
+    "cors": "^2.8.5",
+    "yt-search": "^2.12.1"
   },
   "devDependencies": {
     "live-server": "^1.2.2",
