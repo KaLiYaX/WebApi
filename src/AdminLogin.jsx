@@ -1,5 +1,7 @@
 // FILE: src/AdminLogin.jsx
-// Admin Login Component
+// Admin Login Component - Username/Password Authentication
+
+const { useState } = React;
 
 function AdminLogin({ onLogin }) {
     const [username, setUsername] = useState('');
@@ -7,14 +9,17 @@ function AdminLogin({ onLogin }) {
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
 
+    // Admin credentials
+    const ADMIN_USERNAME = 'KaliyaX';
+    const ADMIN_PASSWORD = '@kx200';
+
     const handleLogin = (e) => {
         e.preventDefault();
         setError('');
         setLoading(true);
 
-        // Admin credentials: username = KaliyaX, password = @kx200
         setTimeout(() => {
-            if (username === 'KaliyaX' && password === '@kx200') {
+            if (username === ADMIN_USERNAME && password === ADMIN_PASSWORD) {
                 onLogin();
             } else {
                 setError('Invalid admin credentials!');
@@ -51,23 +56,25 @@ function AdminLogin({ onLogin }) {
                             <label className="block text-slate-400 text-sm mb-2">Username</label>
                             <input 
                                 type="text" 
-                                placeholder="KaliyaX" 
+                                placeholder="Enter username" 
                                 value={username}
                                 onChange={(e) => setUsername(e.target.value)}
                                 className="w-full px-4 py-3 bg-slate-800/50 border border-slate-700 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none text-white"
                                 disabled={loading}
+                                autoComplete="username"
                             />
                         </div>
                         <div>
                             <label className="block text-slate-400 text-sm mb-2">Password</label>
                             <input 
                                 type="password" 
-                                placeholder="••••••••" 
+                                placeholder="Enter password" 
                                 value={password}
                                 onChange={(e) => setPassword(e.target.value)}
                                 onKeyPress={(e) => e.key === 'Enter' && handleLogin(e)}
                                 className="w-full px-4 py-3 bg-slate-800/50 border border-slate-700 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none text-white"
                                 disabled={loading}
+                                autoComplete="current-password"
                             />
                         </div>
                         <button 
