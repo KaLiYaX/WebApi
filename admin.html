@@ -88,6 +88,17 @@
             useEffect(() => {
                 console.log('🔍 AdminApp mounted - Checking authentication...');
                 
+                // ✅ CRITICAL: Verify we're on admin page
+                const isAdminPage = window.location.pathname.includes('admin.html') || 
+                                   window.location.pathname === '/admin' ||
+                                   window.location.pathname === '/admin.html';
+                
+                if (!isAdminPage) {
+                    console.log('❌ Not admin page, redirecting...');
+                    window.location.href = '/admin.html';
+                    return;
+                }
+                
                 // Listen to Firebase auth state changes
                 const unsubscribe = window.firebaseAuth.onAuthStateChanged((user) => {
                     console.log('🔐 Auth state changed:', user ? user.email : 'No user');
