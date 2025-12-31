@@ -1,9 +1,14 @@
 // FILE: src/AdminLogin.jsx
 // Admin Login - Google OAuth ONLY for kaliya.x.git@gmail.com
 
+const { useState } = React;
+
 function AdminLogin({ onLogin }) {
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
+
+    // ✅ ADMIN EMAIL CONSTANT
+    const ADMIN_EMAIL = 'kaliya.x.git@gmail.com';
 
     const handleGoogleLogin = async () => {
         setError('');
@@ -12,7 +17,7 @@ function AdminLogin({ onLogin }) {
         try {
             const provider = new firebase.auth.GoogleAuthProvider();
             
-            // Force account selection
+            // Force account selection every time
             provider.setCustomParameters({
                 prompt: 'select_account'
             });
@@ -24,16 +29,16 @@ function AdminLogin({ onLogin }) {
             console.log('👤 User signed in:', user.email);
 
             // ✅ CRITICAL CHECK: Only kaliya.x.git@gmail.com
-            if (user.email === 'kaliya.x.git@gmail.com') {
+            if (user.email === ADMIN_EMAIL) {
                 console.log('✅ ADMIN ACCESS GRANTED');
                 onLogin(user.email);
             } else {
                 console.log('❌ ACCESS DENIED for:', user.email);
                 
-                // Sign out unauthorized user
+                // Sign out unauthorized user immediately
                 await window.firebaseAuth.signOut();
                 
-                setError(`🚫 Access Denied!\n\nOnly kaliya.x.git@gmail.com can access the admin panel.\n\nYou tried to login with: ${user.email}`);
+                setError(`🚫 Access Denied!\n\nOnly ${ADMIN_EMAIL} can access the admin panel.\n\nYou tried to login with: ${user.email}`);
             }
         } catch (err) {
             console.error('❌ Login error:', err);
@@ -85,7 +90,7 @@ function AdminLogin({ onLogin }) {
                             <div>
                                 <p className="text-blue-400 text-sm font-semibold mb-1">🔒 Restricted Access</p>
                                 <p className="text-blue-300 text-xs">
-                                    Only <strong className="text-blue-200">kaliya.x.git@gmail.com</strong> has admin privileges.<br/>
+                                    Only <strong className="text-blue-200">{ADMIN_EMAIL}</strong> has admin privileges.<br/>
                                     Other accounts will be <strong className="text-blue-200">automatically rejected</strong>.
                                 </p>
                             </div>
