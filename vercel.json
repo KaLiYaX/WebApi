@@ -4,26 +4,6 @@
     {
       "src": "index.js",
       "use": "@vercel/node"
-    },
-    {
-      "src": "admin.html",
-      "use": "@vercel/static"
-    },
-    {
-      "src": "index.html",
-      "use": "@vercel/static"
-    },
-    {
-      "src": "kx.html",
-      "use": "@vercel/static"
-    },
-    {
-      "src": "styles.css",
-      "use": "@vercel/static"
-    },
-    {
-      "src": "src/**/*.{js,jsx}",
-      "use": "@vercel/static"
     }
   ],
   "routes": [
@@ -48,16 +28,16 @@
       "dest": "/kx.html"
     },
     {
-      "src": "/src/(.*)",
-      "dest": "/src/$1"
-    },
-    {
       "src": "/styles.css",
       "dest": "/styles.css"
     },
     {
-      "src": "/(.*\\.(js|jsx|json|css|png|jpg|jpeg|gif|svg|ico))",
-      "dest": "/$1"
+      "src": "/src/(.*\\.jsx?)",
+      "dest": "/src/$1"
+    },
+    {
+      "src": "/",
+      "dest": "/index.html"
     },
     {
       "src": "/(.*)",
@@ -65,6 +45,23 @@
     }
   ],
   "headers": [
+    {
+      "source": "/(.*)",
+      "headers": [
+        {
+          "key": "X-Content-Type-Options",
+          "value": "nosniff"
+        },
+        {
+          "key": "X-Frame-Options",
+          "value": "DENY"
+        },
+        {
+          "key": "X-XSS-Protection",
+          "value": "1; mode=block"
+        }
+      ]
+    },
     {
       "source": "/api/(.*)",
       "headers": [
@@ -74,8 +71,5 @@
         { "key": "Access-Control-Allow-Headers", "value": "X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version, x-api-key" }
       ]
     }
-  ],
-  "env": {
-    "NODE_ENV": "production"
-  }
+  ]
 }
