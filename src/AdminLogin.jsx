@@ -1,5 +1,5 @@
 // FILE: src/AdminLogin.jsx
-// Admin Login with Hardcoded Credentials
+// Admin Login with Hardcoded Credentials (FIXED)
 
 const { useState } = React;
 
@@ -21,23 +21,40 @@ function AdminLogin({ onLogin }) {
         setError('');
         setLoading(true);
 
+        console.log('🔐 Login attempt:', { 
+            enteredUsername: username, 
+            enteredPassword: password,
+            expectedUsername: ADMIN_CREDENTIALS.username,
+            expectedPassword: ADMIN_CREDENTIALS.password
+        });
+
         try {
             // Simulate loading delay
-            await new Promise(resolve => setTimeout(resolve, 500));
+            await new Promise(resolve => setTimeout(resolve, 300));
 
-            // Check credentials
-            if (username === ADMIN_CREDENTIALS.username && password === ADMIN_CREDENTIALS.password) {
+            // Check credentials (exact match, case-sensitive)
+            const usernameMatch = username.trim() === ADMIN_CREDENTIALS.username;
+            const passwordMatch = password === ADMIN_CREDENTIALS.password;
+
+            console.log('🔍 Validation:', { usernameMatch, passwordMatch });
+
+            if (usernameMatch && passwordMatch) {
                 console.log('✅ Admin login successful');
                 
                 // Store in session
                 sessionStorage.setItem('kaliyax_admin_session', 'true');
-                sessionStorage.setItem('kaliyax_admin_username', username);
+                sessionStorage.setItem('kaliyax_admin_username', username.trim());
                 
                 // Call parent login handler
-                onLogin(username);
+                onLogin(username.trim());
             } else {
+                if (!usernameMatch) {
+                    console.log('❌ Username mismatch');
+                }
+                if (!passwordMatch) {
+                    console.log('❌ Password mismatch');
+                }
                 setError('❌ Invalid username or password!');
-                console.log('❌ Login failed - Invalid credentials');
             }
         } catch (err) {
             console.error('❌ Login error:', err);
@@ -81,7 +98,7 @@ function AdminLogin({ onLogin }) {
                                 </div>
                                 <input 
                                     type="text" 
-                                    placeholder="Enter username" 
+                                    placeholder="Enter admin username" 
                                     value={username}
                                     onChange={(e) => setUsername(e.target.value)}
                                     className="w-full pl-10 pr-4 py-3 bg-slate-800/50 border border-slate-700 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none text-white"
@@ -102,7 +119,7 @@ function AdminLogin({ onLogin }) {
                                 </div>
                                 <input 
                                     type={showPassword ? "text" : "password"}
-                                    placeholder="Enter password" 
+                                    placeholder="Enter admin password" 
                                     value={password}
                                     onChange={(e) => setPassword(e.target.value)}
                                     className="w-full pl-10 pr-12 py-3 bg-slate-800/50 border border-slate-700 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent outline-none text-white"
@@ -159,8 +176,6 @@ function AdminLogin({ onLogin }) {
 
                 <div className="mt-6 text-center text-slate-400 text-sm">
                     <p>⚠️ Admin access only</p>
-                    <p className="mt-2 text-xs">Username: <span className="text-red-400 font-mono">Kaliyax</span></p>
-                    <p className="text-xs">Password: <span className="text-red-400 font-mono">@kx200</span></p>
                 </div>
             </div>
         </div>
