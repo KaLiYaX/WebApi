@@ -1,4 +1,4 @@
-// FILE: src/AuthPage.jsx - OAuth Only (Updated Admin Link)
+// FILE: src/AuthPage.jsx - With Admin Link
 
 const { useState } = React;
 
@@ -83,32 +83,23 @@ function AuthPage() {
                 await window.firebaseDB.collection('users').doc(user.uid).collection('notifications').add({
                     type: 'announcement',
                     title: '🎉 Welcome to KaliyaX API!',
-                    message: `Account created! You received ${welcomeBonus} coins. Don't forget to claim your daily ${welcomeBonus} coins!`,
+                    message: `Account created! You received ${welcomeBonus} coins.`,
                     read: false,
                     timestamp: firebase.firestore.FieldValue.serverTimestamp()
                 });
 
-                console.log(`✅ New user: ${user.email} with ${welcomeBonus} coins`);
+                console.log(`✅ New user: ${user.email}`);
             } else {
                 if (userDoc.data().status === 'suspended') {
                     await window.firebaseAuth.signOut();
-                    setError('Your account has been suspended. Contact support.');
+                    setError('Account suspended. Contact support.');
                     setLoading(false);
                     return;
                 }
-                console.log(`✅ User logged in: ${user.email}`);
             }
         } catch (err) {
             console.error('OAuth error:', err);
-            if (err.code === 'auth/popup-closed-by-user') {
-                setError('Sign-in cancelled');
-            } else if (err.code === 'auth/account-exists-with-different-credential') {
-                setError('Account already exists with different login method');
-            } else if (err.code === 'auth/popup-blocked') {
-                setError('Popup blocked. Please allow popups.');
-            } else {
-                setError(err.message || 'Login failed. Please try again.');
-            }
+            setError(err.message || 'Login failed');
         } finally {
             setLoading(false);
         }
@@ -140,17 +131,12 @@ function AuthPage() {
                                 K
                             </div>
                             <h2 className="text-3xl font-bold mb-2">Welcome to KaliyaX</h2>
-                            <p className="text-slate-400">
-                                Sign in to access powerful API services
-                            </p>
+                            <p className="text-slate-400">Sign in to access powerful APIs</p>
                         </div>
 
                         {error && (
-                            <div className="mb-6 p-3 bg-red-500/10 border border-red-500/30 rounded-lg text-red-400 text-sm flex items-center space-x-2">
-                                <svg className="w-5 h-5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
-                                </svg>
-                                <span>{error}</span>
+                            <div className="mb-6 p-3 bg-red-500/10 border border-red-500/30 rounded-lg text-red-400 text-sm">
+                                {error}
                             </div>
                         )}
 
@@ -158,7 +144,7 @@ function AuthPage() {
                             <button 
                                 onClick={() => handleOAuthLogin('google')}
                                 disabled={loading}
-                                className="w-full py-3 bg-white hover:bg-gray-100 text-gray-800 rounded-lg font-semibold transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-3 border border-gray-300 shadow-sm"
+                                className="w-full py-3 bg-white hover:bg-gray-100 text-gray-800 rounded-lg font-semibold transition-all disabled:opacity-50 flex items-center justify-center space-x-3 border shadow-sm"
                             >
                                 {loading ? (
                                     <div className="w-5 h-5 border-2 border-gray-400 border-t-transparent rounded-full animate-spin"></div>
@@ -178,7 +164,7 @@ function AuthPage() {
                             <button 
                                 onClick={() => handleOAuthLogin('facebook')}
                                 disabled={loading}
-                                className="w-full py-3 bg-[#1877F2] hover:bg-[#166FE5] text-white rounded-lg font-semibold transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-3 shadow-sm"
+                                className="w-full py-3 bg-[#1877F2] hover:bg-[#166FE5] text-white rounded-lg font-semibold transition-all disabled:opacity-50 flex items-center justify-center space-x-3"
                             >
                                 {loading ? (
                                     <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
@@ -195,7 +181,7 @@ function AuthPage() {
                             <button 
                                 onClick={() => handleOAuthLogin('github')}
                                 disabled={loading}
-                                className="w-full py-3 bg-[#24292e] hover:bg-[#1b1f23] text-white rounded-lg font-semibold transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-3 shadow-sm"
+                                className="w-full py-3 bg-[#24292e] hover:bg-[#1b1f23] text-white rounded-lg font-semibold transition-all disabled:opacity-50 flex items-center justify-center space-x-3"
                             >
                                 {loading ? (
                                     <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
@@ -211,19 +197,14 @@ function AuthPage() {
                         </div>
 
                         <div className="mt-6 text-center text-slate-400 text-sm">
-                            <p>By continuing, you agree to our</p>
-                            <div className="flex items-center justify-center space-x-2 mt-1">
-                                <a href="#" className="text-purple-400 hover:text-purple-300">Terms</a>
-                                <span>•</span>
-                                <a href="#" className="text-purple-400 hover:text-purple-300">Privacy</a>
-                            </div>
+                            <p>By continuing, you agree to our Terms & Privacy</p>
                         </div>
                     </div>
 
                     <div className="mt-6 text-center">
                         <div className="bg-blue-500/10 border border-blue-500/30 rounded-lg p-4">
                             <p className="text-blue-400 text-sm">
-                                ✨ Sign up and get <span className="font-bold">100 coins</span>!<br/>
+                                ✨ Get <span className="font-bold">100 coins</span> bonus!<br/>
                                 🎁 Claim <span className="font-bold">100 coins daily</span>!
                             </p>
                         </div>
