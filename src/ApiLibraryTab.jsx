@@ -1,4 +1,4 @@
-// FILE: src/ApiLibraryTab.jsx - With Copy Response & Open URL Features
+// FILE: src/ApiLibraryTab.jsx - With Sidebar Menu & Categories + API Key in URL
 
 function ApiLibraryTab() {
     const [searchQuery, setSearchQuery] = useState('');
@@ -9,6 +9,7 @@ function ApiLibraryTab() {
     const [testResult, setTestResult] = useState(null);
     const [userData, setUserData] = useState(null);
     const [copiedResponse, setCopiedResponse] = useState(false);
+    const [sidebarOpen, setSidebarOpen] = useState(true);
 
     useEffect(() => {
         loadUserData();
@@ -28,20 +29,25 @@ function ApiLibraryTab() {
         }
     };
 
-    // IMPORTANT: ඔබේ Vercel URL එක මෙතන දාන්න
-    const API_BASE_URL = 'https://web-api-q7ey.vercel.app';
+    // IMPORTANT: ඔබේ API Base URLs
+    const API_BASE_URLS = {
+        kaliyax: 'https://webaibykx.netlify.app',
+        darkshan: 'https://api-dark-shan-yt.koyeb.app'
+    };
 
     const endpoints = [
         { 
             category: 'AI & ML', 
+            icon: '🤖',
             apis: [
                 { 
                     name: 'Perplexity AI Search', 
                     desc: 'Advanced AI-powered search', 
                     status: 'active', 
-                    endpoint: `${API_BASE_URL}/api/perplexity-search`,
+                    endpoint: `${API_BASE_URLS.kaliyax}/api/perplexity-search`,
                     method: 'POST',
                     featured: true,
+                    apiKeyInUrl: false,
                     params: { 
                         query: { 
                             type: 'text', 
@@ -55,14 +61,16 @@ function ApiLibraryTab() {
         },
         { 
             category: 'YouTube', 
+            icon: '🎥',
             apis: [
                 { 
                     name: 'YouTube Search', 
                     desc: 'Search YouTube videos', 
                     status: 'active', 
-                    endpoint: `${API_BASE_URL}/api/youtube/search`,
+                    endpoint: `${API_BASE_URLS.kaliyax}/api/youtube/search`,
                     method: 'GET',
                     featured: true,
+                    apiKeyInUrl: false,
                     params: { 
                         q: { 
                             type: 'text', 
@@ -76,9 +84,10 @@ function ApiLibraryTab() {
                     name: 'YouTube MP3 Download', 
                     desc: 'Download YouTube as MP3', 
                     status: 'active', 
-                    endpoint: `${API_BASE_URL}/api/youtube/mp3`,
+                    endpoint: `${API_BASE_URLS.kaliyax}/api/youtube/mp3`,
                     method: 'GET',
                     featured: true,
+                    apiKeyInUrl: false,
                     params: { 
                         url: { 
                             type: 'text', 
@@ -98,8 +107,9 @@ function ApiLibraryTab() {
                     name: 'YouTube MP4 Download', 
                     desc: 'Download YouTube as MP4', 
                     status: 'active', 
-                    endpoint: `${API_BASE_URL}/api/youtube/mp4`,
+                    endpoint: `${API_BASE_URLS.kaliyax}/api/youtube/mp4`,
                     method: 'GET',
+                    apiKeyInUrl: false,
                     params: { 
                         url: { 
                             type: 'text', 
@@ -114,61 +124,27 @@ function ApiLibraryTab() {
                             default: '360' 
                         }
                     }
-                },
+                }
+            ]
+        },
+        { 
+            category: 'Movies & Series (DarkShan)', 
+            icon: '🎬',
+            apis: [
                 { 
-                    name: 'YouTube Transcript', 
-                    desc: 'Get video transcript with AI summary', 
+                    name: 'CineSubz Movie Search', 
+                    desc: 'Search Sinhala subtitle movies', 
                     status: 'active', 
-                    endpoint: `${API_BASE_URL}/api/youtube/transcript`,
+                    endpoint: `${API_BASE_URLS.darkshan}/movie/cinesubz-search`,
                     method: 'GET',
-                    params: { 
-                        url: { 
-                            type: 'text', 
-                            label: 'YouTube URL', 
-                            placeholder: 'https://www.youtube.com/watch?v=...', 
-                            required: true 
-                        }
-                    }
-                },
-                { 
-                    name: 'Play MP3', 
-                    desc: 'Search and get MP3 downloads (Top 5)', 
-                    status: 'active', 
-                    endpoint: `${API_BASE_URL}/api/youtube/playmp3`,
-                    method: 'GET',
+                    featured: true,
+                    apiKeyInUrl: true, // ✅ API key URL එකේ යන්න ඕන
                     params: { 
                         q: { 
                             type: 'text', 
-                            label: 'Search Query', 
-                            placeholder: 'song name', 
+                            label: 'Movie Name', 
+                            placeholder: 'Avengers', 
                             required: true 
-                        },
-                        quality: { 
-                            type: 'select', 
-                            label: 'Quality', 
-                            options: ['128', '192', '256', '320'], 
-                            default: '128' 
-                        }
-                    }
-                },
-                { 
-                    name: 'Play MP4', 
-                    desc: 'Search and get MP4 downloads (Top 5)', 
-                    status: 'active', 
-                    endpoint: `${API_BASE_URL}/api/youtube/playmp4`,
-                    method: 'GET',
-                    params: { 
-                        q: { 
-                            type: 'text', 
-                            label: 'Search Query', 
-                            placeholder: 'video name', 
-                            required: true 
-                        },
-                        quality: { 
-                            type: 'select', 
-                            label: 'Quality', 
-                            options: ['360', '480', '720'], 
-                            default: '360' 
                         }
                     }
                 }
@@ -201,7 +177,7 @@ function ApiLibraryTab() {
 
         try {
             const url = new URL(selectedEndpoint.endpoint);
-            const headers = { 'x-api-key': userData.apiKey };
+            const headers = selectedEndpoint.apiKeyInUrl ? {} : { 'x-api-key': userData.apiKey };
 
             if (selectedEndpoint.method === 'GET') {
                 Object.keys(testParams).forEach(key => {
@@ -209,6 +185,11 @@ function ApiLibraryTab() {
                         url.searchParams.append(key, testParams[key]);
                     }
                 });
+
+                // ✅ Add API key to URL if needed
+                if (selectedEndpoint.apiKeyInUrl) {
+                    url.searchParams.append('apikey', userData.apiKey);
+                }
 
                 const response = await fetch(url.toString(), { headers });
                 const data = await response.json();
@@ -223,7 +204,6 @@ function ApiLibraryTab() {
                 setTestResult({ status: response.status, data, url: url.toString() });
             }
 
-            // Reload user data to show updated balance
             await loadUserData();
 
         } catch (error) {
@@ -239,7 +219,6 @@ function ApiLibraryTab() {
 
     const copyResponse = () => {
         if (!testResult) return;
-        
         const responseText = JSON.stringify(testResult.data, null, 2);
         navigator.clipboard.writeText(responseText);
         setCopiedResponse(true);
@@ -251,25 +230,51 @@ function ApiLibraryTab() {
         window.open(testResult.url, '_blank');
     };
 
-    const extractDownloadUrl = (data) => {
-        // Extract download URL from response if available
-        if (data?.data?.download?.url) return data.data.download.url;
-        if (data?.download?.url) return data.download.url;
-        if (data?.data?.results && Array.isArray(data.data.results) && data.data.results[0]?.download?.url) {
-            return data.data.results[0].download.url;
-        }
-        return null;
-    };
-
     return (
-        <>
-            <div className="mb-8">
-                <h1 className="text-3xl font-bold mb-2">API Library</h1>
-                <p className="text-slate-400">Explore and test APIs with your API key</p>
+        <div className="flex gap-6">
+            {/* Sidebar */}
+            <div className={`${sidebarOpen ? 'w-64' : 'w-16'} transition-all duration-300 bg-slate-900/80 backdrop-blur-xl rounded-2xl border border-slate-800 p-4 sticky top-24 h-fit`}>
+                <button 
+                    onClick={() => setSidebarOpen(!sidebarOpen)}
+                    className="w-full mb-4 p-2 hover:bg-slate-800 rounded-lg transition-colors"
+                >
+                    <svg className={`w-6 h-6 mx-auto transition-transform ${!sidebarOpen && 'rotate-180'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 19l-7-7 7-7m8 14l-7-7 7-7" />
+                    </svg>
+                </button>
+
+                {sidebarOpen && (
+                    <div className="space-y-2">
+                        <h3 className="text-sm font-bold text-slate-400 mb-3 px-2">Categories</h3>
+                        {categories.map(cat => {
+                            const categoryData = endpoints.find(e => e.category === cat);
+                            return (
+                                <button
+                                    key={cat}
+                                    onClick={() => setSelectedCategory(cat)}
+                                    className={`w-full text-left px-3 py-2 rounded-lg transition-colors flex items-center space-x-2 ${
+                                        selectedCategory === cat 
+                                            ? 'bg-purple-600 text-white' 
+                                            : 'hover:bg-slate-800 text-slate-300'
+                                    }`}
+                                >
+                                    {categoryData?.icon && <span>{categoryData.icon}</span>}
+                                    <span className="text-sm font-semibold">{cat}</span>
+                                </button>
+                            );
+                        })}
+                    </div>
+                )}
             </div>
 
-            <div className="bg-slate-900/80 backdrop-blur-xl rounded-2xl border border-slate-800 p-6 mb-8">
-                <div className="grid md:grid-cols-2 gap-4">
+            {/* Main Content */}
+            <div className="flex-1">
+                <div className="mb-8">
+                    <h1 className="text-3xl font-bold mb-2">API Library</h1>
+                    <p className="text-slate-400">Explore and test APIs with your API key</p>
+                </div>
+
+                <div className="bg-slate-900/80 backdrop-blur-xl rounded-2xl border border-slate-800 p-6 mb-8">
                     <div className="relative">
                         <svg className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
@@ -282,221 +287,204 @@ function ApiLibraryTab() {
                             className="w-full pl-10 pr-4 py-3 bg-slate-950/50 border border-slate-700 rounded-lg focus:ring-2 focus:ring-purple-500 outline-none"
                         />
                     </div>
-                    <div className="flex flex-wrap gap-2">
-                        {categories.map(cat => (
-                            <button 
-                                key={cat}
-                                onClick={() => setSelectedCategory(cat)}
-                                className={`px-4 py-2 rounded-lg font-semibold transition-all ${
-                                    selectedCategory === cat ? 'bg-purple-600' : 'bg-slate-800 hover:bg-slate-700'
-                                }`}
-                            >
-                                {cat}
-                            </button>
-                        ))}
-                    </div>
                 </div>
-            </div>
 
-            <div className="space-y-8">
-                {filteredEndpoints.map((category, idx) => (
-                    <div key={idx}>
-                        <h2 className="text-2xl font-bold mb-4 text-purple-400">{category.category}</h2>
-                        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-                            {category.apis.map((api, i) => (
-                                <div 
-                                    key={i}
-                                    onClick={() => { setSelectedEndpoint(api); setTestParams({}); setTestResult(null); setCopiedResponse(false); }}
-                                    className={`bg-slate-900/80 backdrop-blur-xl rounded-xl border p-6 hover:border-purple-500 transition-all cursor-pointer group ${
-                                        api.featured ? 'border-yellow-500 ring-2 ring-yellow-500/30' : 'border-slate-800'
-                                    }`}
-                                >
-                                    {api.featured && (
-                                        <span className="text-xs px-2 py-1 bg-yellow-500/10 text-yellow-400 border border-yellow-500/30 rounded-full font-bold mb-2 inline-block">
-                                            ⭐ FEATURED
-                                        </span>
-                                    )}
-                                    <h3 className="text-lg font-bold mb-2 group-hover:text-purple-400">{api.name}</h3>
-                                    <p className="text-slate-400 text-sm mb-4">{api.desc}</p>
-                                    <div className="flex items-center justify-between">
-                                        <span className={`text-xs px-2 py-1 rounded-full ${
-                                            api.status === 'active' ? 'bg-green-500/10 text-green-400 border border-green-500/30' : 'bg-yellow-500/10 text-yellow-400'
+                <div className="space-y-8">
+                    {filteredEndpoints.map((category, idx) => (
+                        <div key={idx}>
+                            <h2 className="text-2xl font-bold mb-4 flex items-center space-x-2">
+                                <span>{category.icon}</span>
+                                <span className="text-purple-400">{category.category}</span>
+                            </h2>
+                            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+                                {category.apis.map((api, i) => (
+                                    <div 
+                                        key={i}
+                                        onClick={() => { setSelectedEndpoint(api); setTestParams({}); setTestResult(null); setCopiedResponse(false); }}
+                                        className={`bg-slate-900/80 backdrop-blur-xl rounded-xl border p-6 hover:border-purple-500 transition-all cursor-pointer group ${
+                                            api.featured ? 'border-yellow-500 ring-2 ring-yellow-500/30' : 'border-slate-800'
+                                        }`}
+                                    >
+                                        {api.featured && (
+                                            <span className="text-xs px-2 py-1 bg-yellow-500/10 text-yellow-400 border border-yellow-500/30 rounded-full font-bold mb-2 inline-block">
+                                                ⭐ FEATURED
+                                            </span>
+                                        )}
+                                        <h3 className="text-lg font-bold mb-2 group-hover:text-purple-400">{api.name}</h3>
+                                        <p className="text-slate-400 text-sm mb-4">{api.desc}</p>
+                                        <div className="flex items-center justify-between">
+                                            <span className={`text-xs px-2 py-1 rounded-full ${
+                                                api.status === 'active' ? 'bg-green-500/10 text-green-400 border border-green-500/30' : 'bg-yellow-500/10 text-yellow-400'
+                                            }`}>
+                                                {api.status.toUpperCase()}
+                                            </span>
+                                            <span className="text-xs px-2 py-1 bg-blue-500/10 text-blue-400 rounded font-mono">{api.method}</span>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    ))}
+                </div>
+
+                {/* Test Modal - Same as before but with URL update */}
+                {selectedEndpoint && (
+                    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50 overflow-y-auto" onClick={() => setSelectedEndpoint(null)}>
+                        <div className="bg-slate-900 rounded-2xl border border-slate-800 p-6 sm:p-8 max-w-3xl w-full max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+                            
+                            <div className="flex items-center justify-between mb-6">
+                                <h2 className="text-2xl font-bold">{selectedEndpoint.name}</h2>
+                                <button onClick={() => setSelectedEndpoint(null)} className="text-slate-400 hover:text-white">
+                                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                    </svg>
+                                </button>
+                            </div>
+
+                            <p className="text-slate-400 mb-6">{selectedEndpoint.desc}</p>
+
+                            {/* Endpoint Info */}
+                            <div className="mb-6">
+                                <h3 className="font-bold mb-3 text-purple-400">Endpoint</h3>
+                                <div className="bg-slate-950/50 rounded-lg p-4 border border-slate-800">
+                                    <div className="flex items-center space-x-3 mb-2">
+                                        <span className={`px-2 py-1 rounded text-xs font-bold ${
+                                            selectedEndpoint.method === 'GET' ? 'bg-green-500 text-black' : 'bg-blue-500 text-white'
                                         }`}>
-                                            {api.status.toUpperCase()}
+                                            {selectedEndpoint.method}
                                         </span>
-                                        <span className="text-xs px-2 py-1 bg-blue-500/10 text-blue-400 rounded font-mono">{api.method}</span>
+                                        <code className="text-purple-400 text-sm break-all">{selectedEndpoint.endpoint}</code>
+                                    </div>
+                                    {selectedEndpoint.apiKeyInUrl && (
+                                        <div className="mt-2 p-2 bg-yellow-500/10 border border-yellow-500/30 rounded text-xs text-yellow-400">
+                                            ⚠️ This API requires API key in URL parameter: <code>?apikey=YOUR_KEY</code>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+
+                            {/* Test Parameters */}
+                            {selectedEndpoint.params && (
+                                <div className="mb-6">
+                                    <h3 className="font-bold mb-3 text-purple-400">Test Parameters</h3>
+                                    <div className="space-y-3">
+                                        {Object.entries(selectedEndpoint.params).map(([key, config]) => (
+                                            <div key={key}>
+                                                <label className="block text-slate-400 text-sm mb-2">
+                                                    {config.label} {config.required && <span className="text-red-400">*</span>}
+                                                </label>
+                                                {config.type === 'select' ? (
+                                                    <select
+                                                        value={testParams[key] || config.default || ''}
+                                                        onChange={(e) => setTestParams({...testParams, [key]: e.target.value})}
+                                                        className="w-full px-4 py-3 bg-slate-950/50 border border-slate-700 rounded-lg outline-none"
+                                                    >
+                                                        {config.options.map(opt => (
+                                                            <option key={opt} value={opt}>{opt}</option>
+                                                        ))}
+                                                    </select>
+                                                ) : (
+                                                    <input
+                                                        type="text"
+                                                        placeholder={config.placeholder}
+                                                        value={testParams[key] || ''}
+                                                        onChange={(e) => setTestParams({...testParams, [key]: e.target.value})}
+                                                        className="w-full px-4 py-3 bg-slate-950/50 border border-slate-700 rounded-lg outline-none"
+                                                    />
+                                                )}
+                                            </div>
+                                        ))}
                                     </div>
                                 </div>
-                            ))}
-                        </div>
-                    </div>
-                ))}
-            </div>
+                            )}
 
-            {/* API Test Modal */}
-            {selectedEndpoint && (
-                <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50 overflow-y-auto" onClick={() => setSelectedEndpoint(null)}>
-                    <div className="bg-slate-900 rounded-2xl border border-slate-800 p-6 sm:p-8 max-w-3xl w-full max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
-                        
-                        <div className="flex items-center justify-between mb-6">
-                            <h2 className="text-2xl font-bold">{selectedEndpoint.name}</h2>
-                            <button onClick={() => setSelectedEndpoint(null)} className="text-slate-400 hover:text-white">
-                                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                                </svg>
-                            </button>
-                        </div>
-
-                        <p className="text-slate-400 mb-6">{selectedEndpoint.desc}</p>
-
-                        {/* Endpoint Info */}
-                        <div className="mb-6">
-                            <h3 className="font-bold mb-3 text-purple-400">Endpoint</h3>
-                            <div className="bg-slate-950/50 rounded-lg p-4 border border-slate-800">
-                                <div className="flex items-center space-x-3 mb-2">
-                                    <span className={`px-2 py-1 rounded text-xs font-bold ${
-                                        selectedEndpoint.method === 'GET' ? 'bg-green-500 text-black' : 'bg-blue-500 text-white'
-                                    }`}>
-                                        {selectedEndpoint.method}
-                                    </span>
-                                    <code className="text-purple-400 text-sm break-all">{selectedEndpoint.endpoint}</code>
+                            {/* Test Button */}
+                            <div className="flex items-center justify-between p-4 bg-yellow-500/10 border border-yellow-500/30 rounded-lg mb-6">
+                                <div>
+                                    <p className="font-semibold text-yellow-400">Cost: 5 coins</p>
+                                    <p className="text-slate-400 text-sm">Your balance: {userData?.balance || 0} coins</p>
                                 </div>
+                                <button
+                                    onClick={handleTestApi}
+                                    disabled={testLoading || !userData?.apiKey}
+                                    className="px-6 py-3 bg-purple-600 hover:bg-purple-700 rounded-lg font-semibold disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
+                                >
+                                    {testLoading ? (
+                                        <>
+                                            <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                                            <span>Testing...</span>
+                                        </>
+                                    ) : (
+                                        <>
+                                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                            </svg>
+                                            <span>Test API</span>
+                                        </>
+                                    )}
+                                </button>
                             </div>
-                        </div>
 
-                        {/* Test Parameters */}
-                        {selectedEndpoint.params && (
-                            <div className="mb-6">
-                                <h3 className="font-bold mb-3 text-purple-400">Test Parameters</h3>
-                                <div className="space-y-3">
-                                    {Object.entries(selectedEndpoint.params).map(([key, config]) => (
-                                        <div key={key}>
-                                            <label className="block text-slate-400 text-sm mb-2">
-                                                {config.label} {config.required && <span className="text-red-400">*</span>}
-                                            </label>
-                                            {config.type === 'select' ? (
-                                                <select
-                                                    value={testParams[key] || config.default || ''}
-                                                    onChange={(e) => setTestParams({...testParams, [key]: e.target.value})}
-                                                    className="w-full px-4 py-3 bg-slate-950/50 border border-slate-700 rounded-lg outline-none"
-                                                >
-                                                    {config.options.map(opt => (
-                                                        <option key={opt} value={opt}>{opt}</option>
-                                                    ))}
-                                                </select>
-                                            ) : (
-                                                <input
-                                                    type="text"
-                                                    placeholder={config.placeholder}
-                                                    value={testParams[key] || ''}
-                                                    onChange={(e) => setTestParams({...testParams, [key]: e.target.value})}
-                                                    className="w-full px-4 py-3 bg-slate-950/50 border border-slate-700 rounded-lg outline-none"
-                                                />
-                                            )}
-                                        </div>
-                                    ))}
-                                </div>
-                            </div>
-                        )}
-
-                        {/* Test Button */}
-                        <div className="flex items-center justify-between p-4 bg-yellow-500/10 border border-yellow-500/30 rounded-lg mb-6">
-                            <div>
-                                <p className="font-semibold text-yellow-400">Cost: 5 coins</p>
-                                <p className="text-slate-400 text-sm">Your balance: {userData?.balance || 0} coins</p>
-                            </div>
-                            <button
-                                onClick={handleTestApi}
-                                disabled={testLoading || !userData?.apiKey}
-                                className="px-6 py-3 bg-purple-600 hover:bg-purple-700 rounded-lg font-semibold disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
-                            >
-                                {testLoading ? (
-                                    <>
-                                        <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                                        <span>Testing...</span>
-                                    </>
-                                ) : (
-                                    <>
-                                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                        </svg>
-                                        <span>Test API</span>
-                                    </>
-                                )}
-                            </button>
-                        </div>
-
-                        {/* Test Result */}
-                        {testResult && (
-                            <div className="mb-6">
-                                <div className="flex items-center justify-between mb-3">
-                                    <h3 className="font-bold text-purple-400">Response</h3>
-                                    <div className="flex items-center space-x-2">
-                                        <button
-                                            onClick={copyResponse}
-                                            className="px-3 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg text-sm font-semibold flex items-center space-x-2"
-                                        >
-                                            {copiedResponse ? (
-                                                <>
-                                                    <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                                                        <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                                                    </svg>
-                                                    <span>Copied!</span>
-                                                </>
-                                            ) : (
-                                                <>
-                                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                                                    </svg>
-                                                    <span>Copy</span>
-                                                </>
-                                            )}
-                                        </button>
-
-                                        {extractDownloadUrl(testResult.data) && (
+                            {/* Test Result */}
+                            {testResult && (
+                                <div className="mb-6">
+                                    <div className="flex items-center justify-between mb-3">
+                                        <h3 className="font-bold text-purple-400">Response</h3>
+                                        <div className="flex items-center space-x-2">
                                             <button
-                                                onClick={() => window.open(extractDownloadUrl(testResult.data), '_blank')}
-                                                className="px-3 py-2 bg-green-600 hover:bg-green-700 rounded-lg text-sm font-semibold flex items-center space-x-2"
+                                                onClick={copyResponse}
+                                                className="px-3 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg text-sm font-semibold flex items-center space-x-2"
+                                            >
+                                                {copiedResponse ? (
+                                                    <>
+                                                        <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                                                            <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                                                        </svg>
+                                                        <span>Copied!</span>
+                                                    </>
+                                                ) : (
+                                                    <>
+                                                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                                                        </svg>
+                                                        <span>Copy</span>
+                                                    </>
+                                                )}
+                                            </button>
+
+                                            <button
+                                                onClick={openResponseUrl}
+                                                className="px-3 py-2 bg-purple-600 hover:bg-purple-700 rounded-lg text-sm font-semibold flex items-center space-x-2"
                                             >
                                                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
                                                 </svg>
-                                                <span>Download</span>
+                                                <span>Open URL</span>
                                             </button>
-                                        )}
-
-                                        <button
-                                            onClick={openResponseUrl}
-                                            className="px-3 py-2 bg-purple-600 hover:bg-purple-700 rounded-lg text-sm font-semibold flex items-center space-x-2"
-                                        >
-                                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                                            </svg>
-                                            <span>Open URL</span>
-                                        </button>
+                                        </div>
+                                    </div>
+                                    <div className={`bg-slate-950/50 rounded-lg p-4 border ${
+                                        testResult.status >= 200 && testResult.status < 300 ? 'border-green-500/30' : 'border-red-500/30'
+                                    }`}>
+                                        <div className="flex items-center justify-between mb-2">
+                                            <span className={`text-sm font-bold ${
+                                                testResult.status >= 200 && testResult.status < 300 ? 'text-green-400' : 'text-red-400'
+                                            }`}>
+                                                Status: {testResult.status}
+                                            </span>
+                                        </div>
+                                        <pre className="text-slate-300 text-sm overflow-x-auto whitespace-pre-wrap max-h-96">
+                                            {JSON.stringify(testResult.data, null, 2)}
+                                        </pre>
                                     </div>
                                 </div>
-                                <div className={`bg-slate-950/50 rounded-lg p-4 border ${
-                                    testResult.status >= 200 && testResult.status < 300 ? 'border-green-500/30' : 'border-red-500/30'
-                                }`}>
-                                    <div className="flex items-center justify-between mb-2">
-                                        <span className={`text-sm font-bold ${
-                                            testResult.status >= 200 && testResult.status < 300 ? 'text-green-400' : 'text-red-400'
-                                        }`}>
-                                            Status: {testResult.status}
-                                        </span>
-                                    </div>
-                                    <pre className="text-slate-300 text-sm overflow-x-auto whitespace-pre-wrap max-h-96">
-                                        {JSON.stringify(testResult.data, null, 2)}
-                                    </pre>
-                                </div>
-                            </div>
-                        )}
+                            )}
 
+                        </div>
                     </div>
-                </div>
-            )}
-        </>
+                )}
+            </div>
+        </div>
     );
 }
