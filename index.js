@@ -124,6 +124,19 @@ async function verifyAndDeductCoins(apiKey, endpoint) {
   }
 }
 
+// ✅ Helper function to get API key from request (header OR query parameter)
+function getApiKey(req) {
+  // Try header first (preferred method)
+  let apiKey = req.headers['x-api-key'];
+  
+  // If not in header, try query parameter (for browser testing)
+  if (!apiKey) {
+    apiKey = req.query['x-api-key'] || req.query['apikey'];
+  }
+  
+  return apiKey;
+}
+
 function handleApiResponse(res, auth, data, error = null) {
   if (!auth.success) {
     return res.status(auth.code || 500).json({
@@ -191,9 +204,10 @@ app.get('/', (req, res) => {
 // YOUTUBE APIs
 // ==========================================
 
+// YouTube Search
 app.get('/api/youtube/search', async (req, res) => {
   try {
-    const apiKey = req.headers['x-api-key'];
+    const apiKey = getApiKey(req); // ✅ Get from header OR query parameter
     if (!apiKey && firebaseInitialized) {
       return res.status(401).json({ success: false, error: 'API key required' });
     }
@@ -215,7 +229,7 @@ app.get('/api/youtube/search', async (req, res) => {
 
 app.get('/api/youtube/mp3', async (req, res) => {
   try {
-    const apiKey = req.headers['x-api-key'];
+    const apiKey = getApiKey(req); // ✅ Get from header OR query parameter
     if (!apiKey && firebaseInitialized) {
       return res.status(401).json({ success: false, error: 'API key required' });
     }
@@ -237,7 +251,7 @@ app.get('/api/youtube/mp3', async (req, res) => {
 
 app.get('/api/youtube/mp4', async (req, res) => {
   try {
-    const apiKey = req.headers['x-api-key'];
+    const apiKey = getApiKey(req); // ✅ Get from header OR query parameter
     if (!apiKey && firebaseInitialized) {
       return res.status(401).json({ success: false, error: 'API key required' });
     }
@@ -259,7 +273,7 @@ app.get('/api/youtube/mp4', async (req, res) => {
 
 app.get('/api/youtube/transcript', async (req, res) => {
   try {
-    const apiKey = req.headers['x-api-key'];
+    const apiKey = getApiKey(req); // ✅ Get from header OR query parameter
     if (!apiKey && firebaseInitialized) {
       return res.status(401).json({ success: false, error: 'API key required' });
     }
@@ -281,7 +295,7 @@ app.get('/api/youtube/transcript', async (req, res) => {
 
 app.get('/api/youtube/playmp3', async (req, res) => {
   try {
-    const apiKey = req.headers['x-api-key'];
+    const apiKey = getApiKey(req); // ✅ Get from header OR query parameter
     if (!apiKey && firebaseInitialized) {
       return res.status(401).json({ success: false, error: 'API key required' });
     }
@@ -303,7 +317,7 @@ app.get('/api/youtube/playmp3', async (req, res) => {
 
 app.get('/api/youtube/playmp4', async (req, res) => {
   try {
-    const apiKey = req.headers['x-api-key'];
+    const apiKey = getApiKey(req); // ✅ Get from header OR query parameter
     if (!apiKey && firebaseInitialized) {
       return res.status(401).json({ success: false, error: 'API key required' });
     }
