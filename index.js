@@ -1,9 +1,8 @@
-// FILE: index.js - Main Express Server with Perplexity AI + YouTube APIs
+// FILE: index.js - Main Express Server with Clean Routes
 
 const express = require('express');
 const cors = require('cors');
 const admin = require('firebase-admin');
-const axios = require('axios');
 const { v4: uuidv4 } = require('uuid');
 
 const app = express();
@@ -36,8 +35,16 @@ try {
 
 const db = firebaseInitialized ? admin.firestore() : null;
 
-// Import YouTube Scrapers
+// Import Scrapers
 const { search, ytmp3, ytmp4, transcript, playmp3, playmp4 } = require('./scrapers/youtube');
+const {
+  cinesubzSearch,
+  cinesubzMovieInfo,
+  cinesubzTvInfo,
+  cinesubzEpisodeInfo,
+  cinesubzDownload,
+  genericDarkShanCall
+} = require('./scrapers/darkshan');
 
 // ==========================================
 // AUTHENTICATION & COIN DEDUCTION
@@ -153,15 +160,27 @@ app.get('/', (req, res) => {
   res.json({
     success: true,
     message: 'KaliyaX API Portal',
-    version: '1.0.0',
+    version: '2.0.0',
     endpoints: {
-      perplexity: '/api/perplexity-search',
-      youtube_search: '/api/youtube/search',
-      youtube_mp3: '/api/youtube/mp3',
-      youtube_mp4: '/api/youtube/mp4',
-      youtube_transcript: '/api/youtube/transcript',
-      youtube_playmp3: '/api/youtube/playmp3',
-      youtube_playmp4: '/api/youtube/playmp4'
+      youtube: {
+        search: '/api/youtube/search',
+        mp3: '/api/youtube/mp3',
+        mp4: '/api/youtube/mp4',
+        transcript: '/api/youtube/transcript',
+        playmp3: '/api/youtube/playmp3',
+        playmp4: '/api/youtube/playmp4'
+      },
+      movies: {
+        search: '/api/movie/cinesubz-search',
+        info: '/api/movie/cinesubz-info',
+        download: '/api/movie/cinesubz-download'
+      },
+      tv: {
+        info: '/api/tv/cinesubz-info'
+      },
+      episode: {
+        info: '/api/episode/cinesubz-info'
+      }
     },
     authentication: firebaseInitialized ? 'enabled' : 'test mode',
     documentation: 'https://docs.kaliyax.com'
@@ -169,131 +188,9 @@ app.get('/', (req, res) => {
 });
 
 // ==========================================
-// PERPLEXITY AI API
-// ==========================================
-
-app.post('/api/perplexity-search', async (req, res) => {
-  res.set('Access-Control-Allow-Origin', '*');
-  
-  try {
-    const apiKey = req.headers['x-api-key'];
-    if (!apiKey && firebaseInitialized) {
-      return res.status(401).json({ success: false, error: 'API key required' });
-    }
-
-    const auth = await verifyAndDeductCoins(apiKey, '/api/perplexity-search');
-    if (!auth.success) {
-      return res.status(auth.code).json({
-        success: false,
-        error: auth.error,
-        required_coins: auth.required,
-        current_balance: auth.current
-      });
-    }
-
-    const { query, source = { web: true, academic: false, social: false, finance: false } } = req.body;
-
-    if (!query) {
-      return res.status(400).json({ success: false, error: 'Query parameter required' });
-    }
-
-    const sourceMapping = {
-      web: 'web',
-      academic: 'scholar',
-      social: 'social',
-      finance: 'edgar'
-    };
-
-    const activeSources = Object.keys(source)
-      .filter(key => source[key] === true)
-      .map(key => sourceMapping[key])
-      .filter(Boolean);
-
-    const frontend = uuidv4();
-
-    const { data } = await axios.post('https://api.nekolabs.web.id/px?url=https://www.perplexity.ai/rest/sse/perplexity_ask', {
-      params: {
-        attachments: [],
-        language: 'en-US',
-        timezone: 'Asia/Colombo',
-        search_focus: 'internet',
-        sources: activeSources.length > 0 ? activeSources : ['web'],
-        search_recency_filter: null,
-        frontend_uuid: frontend,
-        mode: 'concise',
-        model_preference: 'turbo',
-        is_related_query: false,
-        is_sponsored: false,
-        visitor_id: uuidv4(),
-        frontend_context_uuid: uuidv4(),
-        prompt_source: 'user',
-        query_source: 'home',
-        is_incognito: false,
-        time_from_first_type: 2273.9,
-        local_search_enabled: false,
-        use_schematized_api: true,
-        send_back_text_in_streaming_api: false,
-        supported_block_use_cases: [
-          'answer_modes', 'media_items', 'knowledge_cards'
-        ],
-        client_coordinates: null,
-        mentions: [],
-        dsl_query: query,
-        skip_search_enabled: true,
-        is_nav_suggestions_disabled: false,
-        always_search_override: false,
-        override_no_search: false,
-        comet_max_assistant_enabled: false,
-        should_ask_for_mcp_tool_confirmation: true,
-        version: '2.18'
-      },
-      query_str: query
-    }, {
-      headers: {
-        'content-type': 'application/json',
-        'referer': 'https://www.perplexity.ai/search/',
-        'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-        'x-request-id': frontend
-      },
-      timeout: 30000
-    });
-
-    const info = JSON.parse(
-      data.result.content
-        .split('\n')
-        .filter(l => l.startsWith('data:'))
-        .map(l => JSON.parse(l.slice(6)))
-        .find(l => l.final_sse_message).text
-    );
-
-    const answer = JSON.parse(
-      info.find(s => s.step_type === 'FINAL')?.content?.answer || '{}'
-    ).answer;
-
-    const searchResults = info.find(s => s.step_type === 'SEARCH_RESULTS')?.content?.web_results || [];
-
-    if (!answer) {
-      throw new Error('No result from Perplexity');
-    }
-
-    return handleApiResponse(res, auth, {
-      answer: answer,
-      search_results: searchResults,
-      query: query,
-      sources_used: activeSources.length > 0 ? activeSources : ['web']
-    });
-
-  } catch (error) {
-    console.error('❌ Perplexity error:', error);
-    return res.status(500).json({ success: false, error: error.message });
-  }
-});
-
-// ==========================================
 // YOUTUBE APIs
 // ==========================================
 
-// YouTube Search
 app.get('/api/youtube/search', async (req, res) => {
   try {
     const apiKey = req.headers['x-api-key'];
@@ -316,7 +213,6 @@ app.get('/api/youtube/search', async (req, res) => {
   }
 });
 
-// YouTube MP3
 app.get('/api/youtube/mp3', async (req, res) => {
   try {
     const apiKey = req.headers['x-api-key'];
@@ -339,7 +235,6 @@ app.get('/api/youtube/mp3', async (req, res) => {
   }
 });
 
-// YouTube MP4
 app.get('/api/youtube/mp4', async (req, res) => {
   try {
     const apiKey = req.headers['x-api-key'];
@@ -362,7 +257,6 @@ app.get('/api/youtube/mp4', async (req, res) => {
   }
 });
 
-// YouTube Transcript
 app.get('/api/youtube/transcript', async (req, res) => {
   try {
     const apiKey = req.headers['x-api-key'];
@@ -385,7 +279,6 @@ app.get('/api/youtube/transcript', async (req, res) => {
   }
 });
 
-// YouTube Play MP3
 app.get('/api/youtube/playmp3', async (req, res) => {
   try {
     const apiKey = req.headers['x-api-key'];
@@ -408,7 +301,6 @@ app.get('/api/youtube/playmp3', async (req, res) => {
   }
 });
 
-// YouTube Play MP4
 app.get('/api/youtube/playmp4', async (req, res) => {
   try {
     const apiKey = req.headers['x-api-key'];
@@ -432,10 +324,216 @@ app.get('/api/youtube/playmp4', async (req, res) => {
 });
 
 // ==========================================
+// DARKSHAN CINESUBZ APIs
+// ==========================================
+
+// CineSubz Movie Search
+app.get('/api/movie/cinesubz-search', async (req, res) => {
+  res.set('Access-Control-Allow-Origin', '*');
+  
+  try {
+    const apiKey = req.headers['x-api-key'];
+    if (!apiKey && firebaseInitialized) {
+      return res.status(401).json({ success: false, error: 'API key required' });
+    }
+
+    const auth = await verifyAndDeductCoins(apiKey, '/api/movie/cinesubz-search');
+    if (!auth.success) {
+      return res.status(auth.code).json({
+        success: false,
+        error: auth.error,
+        required_coins: auth.required,
+        current_balance: auth.current
+      });
+    }
+
+    const { q } = req.query;
+    if (!q) {
+      return res.status(400).json({ success: false, error: 'Query parameter (q) required' });
+    }
+
+    const result = await cinesubzSearch(q);
+    return handleApiResponse(res, auth, result.data, result.success ? null : result.error);
+
+  } catch (error) {
+    console.error('❌ CineSubz Search error:', error);
+    return res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// CineSubz Movie Info
+app.get('/api/movie/cinesubz-info', async (req, res) => {
+  res.set('Access-Control-Allow-Origin', '*');
+  
+  try {
+    const apiKey = req.headers['x-api-key'];
+    if (!apiKey && firebaseInitialized) {
+      return res.status(401).json({ success: false, error: 'API key required' });
+    }
+
+    const auth = await verifyAndDeductCoins(apiKey, '/api/movie/cinesubz-info');
+    if (!auth.success) {
+      return res.status(auth.code).json({
+        success: false,
+        error: auth.error,
+        required_coins: auth.required,
+        current_balance: auth.current
+      });
+    }
+
+    const { url } = req.query;
+    if (!url) {
+      return res.status(400).json({ success: false, error: 'URL parameter required' });
+    }
+
+    const result = await cinesubzMovieInfo(url);
+    return handleApiResponse(res, auth, result.data, result.success ? null : result.error);
+
+  } catch (error) {
+    console.error('❌ CineSubz Movie Info error:', error);
+    return res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// CineSubz TV Series Info
+app.get('/api/tv/cinesubz-info', async (req, res) => {
+  res.set('Access-Control-Allow-Origin', '*');
+  
+  try {
+    const apiKey = req.headers['x-api-key'];
+    if (!apiKey && firebaseInitialized) {
+      return res.status(401).json({ success: false, error: 'API key required' });
+    }
+
+    const auth = await verifyAndDeductCoins(apiKey, '/api/tv/cinesubz-info');
+    if (!auth.success) {
+      return res.status(auth.code).json({
+        success: false,
+        error: auth.error,
+        required_coins: auth.required,
+        current_balance: auth.current
+      });
+    }
+
+    const { url } = req.query;
+    if (!url) {
+      return res.status(400).json({ success: false, error: 'URL parameter required' });
+    }
+
+    const result = await cinesubzTvInfo(url);
+    return handleApiResponse(res, auth, result.data, result.success ? null : result.error);
+
+  } catch (error) {
+    console.error('❌ CineSubz TV Info error:', error);
+    return res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// CineSubz Episode Info
+app.get('/api/episode/cinesubz-info', async (req, res) => {
+  res.set('Access-Control-Allow-Origin', '*');
+  
+  try {
+    const apiKey = req.headers['x-api-key'];
+    if (!apiKey && firebaseInitialized) {
+      return res.status(401).json({ success: false, error: 'API key required' });
+    }
+
+    const auth = await verifyAndDeductCoins(apiKey, '/api/episode/cinesubz-info');
+    if (!auth.success) {
+      return res.status(auth.code).json({
+        success: false,
+        error: auth.error,
+        required_coins: auth.required,
+        current_balance: auth.current
+      });
+    }
+
+    const { url } = req.query;
+    if (!url) {
+      return res.status(400).json({ success: false, error: 'URL parameter required' });
+    }
+
+    const result = await cinesubzEpisodeInfo(url);
+    return handleApiResponse(res, auth, result.data, result.success ? null : result.error);
+
+  } catch (error) {
+    console.error('❌ CineSubz Episode Info error:', error);
+    return res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// CineSubz Movie Download
+app.get('/api/movie/cinesubz-download', async (req, res) => {
+  res.set('Access-Control-Allow-Origin', '*');
+  
+  try {
+    const apiKey = req.headers['x-api-key'];
+    if (!apiKey && firebaseInitialized) {
+      return res.status(401).json({ success: false, error: 'API key required' });
+    }
+
+    const auth = await verifyAndDeductCoins(apiKey, '/api/movie/cinesubz-download');
+    if (!auth.success) {
+      return res.status(auth.code).json({
+        success: false,
+        error: auth.error,
+        required_coins: auth.required,
+        current_balance: auth.current
+      });
+    }
+
+    const { url } = req.query;
+    if (!url) {
+      return res.status(400).json({ success: false, error: 'URL parameter required' });
+    }
+
+    const result = await cinesubzDownload(url);
+    return handleApiResponse(res, auth, result.data, result.success ? null : result.error);
+
+  } catch (error) {
+    console.error('❌ CineSubz Download error:', error);
+    return res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Generic DarkShan Proxy (for any other endpoint)
+app.get('/api/darkshan/*', async (req, res) => {
+  res.set('Access-Control-Allow-Origin', '*');
+  
+  try {
+    const apiKey = req.headers['x-api-key'];
+    if (!apiKey && firebaseInitialized) {
+      return res.status(401).json({ success: false, error: 'API key required' });
+    }
+
+    const endpoint = req.params[0];
+    const auth = await verifyAndDeductCoins(apiKey, `/api/darkshan/${endpoint}`);
+    
+    if (!auth.success) {
+      return res.status(auth.code).json({
+        success: false,
+        error: auth.error,
+        required_coins: auth.required,
+        current_balance: auth.current
+      });
+    }
+
+    const result = await genericDarkShanCall(`/${endpoint}`, req.query);
+    return handleApiResponse(res, auth, result.data, result.success ? null : result.error);
+
+  } catch (error) {
+    console.error('❌ DarkShan Proxy error:', error);
+    return res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// ==========================================
 // START SERVER
 // ==========================================
 
 app.listen(port, () => {
   console.log(`🚀 Server running on http://localhost:${port}`);
   console.log(`🔐 Authentication: ${firebaseInitialized ? 'ENABLED' : 'TEST MODE'}`);
+  console.log(`✅ All routes loaded`);
 });
