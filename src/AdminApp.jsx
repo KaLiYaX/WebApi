@@ -1,15 +1,15 @@
 // FILE: src/AdminApp.jsx
-// Admin App Main Controller - UPDATED WITH EMAIL AUTH
+// Admin App Main Controller - UPDATED WITH HARDCODED AUTH
 
 const { useState, useEffect } = React;
 
-// ✅ ADMIN EMAIL - මෙතන ඔබේ admin email දාන්න
-const ADMIN_EMAIL = 'kaliya.x.git@gmail.com';
+// ✅ ADMIN USERNAME
+const ADMIN_USERNAME = 'Kaliyax';
 
 function AdminApp() {
     const [isAdminLoggedIn, setIsAdminLoggedIn] = useState(false);
     const [loading, setLoading] = useState(true);
-    const [adminEmail, setAdminEmail] = useState(null);
+    const [adminUsername, setAdminUsername] = useState(null);
 
     useEffect(() => {
         console.log('🔍 AdminApp mounted - Checking authentication...');
@@ -25,78 +25,43 @@ function AdminApp() {
             return;
         }
         
-        // Listen to Firebase auth state changes
-        const unsubscribe = window.firebaseAuth.onAuthStateChanged((user) => {
-            console.log('🔐 Auth state changed:', user ? user.email : 'No user');
-            
-            if (user) {
-                console.log('👤 User detected:', user.email);
-                
-                // ✅ CRITICAL CHECK: Only allow ADMIN_EMAIL
-                if (user.email === ADMIN_EMAIL) {
-                    console.log('✅ ADMIN ACCESS GRANTED:', user.email);
-                    sessionStorage.setItem('kaliyax_admin_session', 'true');
-                    sessionStorage.setItem('kaliyax_admin_email', user.email);
-                    setIsAdminLoggedIn(true);
-                    setAdminEmail(user.email);
-                } else {
-                    console.log('❌ ACCESS DENIED - Wrong email:', user.email);
-                    
-                    // Sign out unauthorized user
-                    window.firebaseAuth.signOut().then(() => {
-                        console.log('🔓 Unauthorized user signed out');
-                    });
-                    
-                    sessionStorage.removeItem('kaliyax_admin_session');
-                    sessionStorage.removeItem('kaliyax_admin_email');
-                    
-                    setIsAdminLoggedIn(false);
-                    setAdminEmail(null);
-                    
-                    alert(`🚫 ACCESS DENIED!\n\nOnly ${ADMIN_EMAIL} can access admin panel.\n\nYou tried: ${user.email}`);
-                }
-            } else {
-                console.log('👤 No user signed in');
-                sessionStorage.removeItem('kaliyax_admin_session');
-                sessionStorage.removeItem('kaliyax_admin_email');
-                setIsAdminLoggedIn(false);
-                setAdminEmail(null);
-            }
-            
-            setLoading(false);
-        });
-
-        return () => {
-            console.log('🧹 Cleaning up auth listener');
-            unsubscribe();
-        };
+        // Check session storage for existing login
+        const session = sessionStorage.getItem('kaliyax_admin_session');
+        const username = sessionStorage.getItem('kaliyax_admin_username');
+        
+        if (session === 'true' && username === ADMIN_USERNAME) {
+            console.log('✅ Found valid admin session:', username);
+            setIsAdminLoggedIn(true);
+            setAdminUsername(username);
+        } else {
+            console.log('👤 No valid admin session found');
+            setIsAdminLoggedIn(false);
+            setAdminUsername(null);
+        }
+        
+        setLoading(false);
     }, []);
 
-    const handleAdminLogin = (email) => {
-        console.log('✅ Admin login successful:', email);
+    const handleAdminLogin = (username) => {
+        console.log('✅ Admin login successful:', username);
         
-        if (email === ADMIN_EMAIL) {
+        if (username === ADMIN_USERNAME) {
             sessionStorage.setItem('kaliyax_admin_session', 'true');
-            sessionStorage.setItem('kaliyax_admin_email', email);
+            sessionStorage.setItem('kaliyax_admin_username', username);
             setIsAdminLoggedIn(true);
-            setAdminEmail(email);
+            setAdminUsername(username);
         } else {
-            console.error('❌ Login attempted with wrong email:', email);
+            console.error('❌ Login attempted with wrong username:', username);
             handleAdminLogout();
         }
     };
 
-    const handleAdminLogout = async () => {
+    const handleAdminLogout = () => {
         console.log('🔓 Admin logging out');
-        try {
-            await window.firebaseAuth.signOut();
-        } catch (error) {
-            console.error('Logout error:', error);
-        }
         sessionStorage.removeItem('kaliyax_admin_session');
-        sessionStorage.removeItem('kaliyax_admin_email');
+        sessionStorage.removeItem('kaliyax_admin_username');
         setIsAdminLoggedIn(false);
-        setAdminEmail(null);
+        setAdminUsername(null);
     };
 
     if (loading) {
@@ -112,12 +77,12 @@ function AdminApp() {
 
     console.log('🎨 Rendering:', { 
         isAdminLoggedIn, 
-        adminEmail, 
-        expectedEmail: ADMIN_EMAIL 
+        adminUsername, 
+        expectedUsername: ADMIN_USERNAME 
     });
 
-    return (isAdminLoggedIn && adminEmail === ADMIN_EMAIL) ? (
-        <AdminPanel onLogout={handleAdminLogout} adminEmail={adminEmail} />
+    return (isAdminLoggedIn && adminUsername === ADMIN_USERNAME) ? (
+        <AdminPanel onLogout={handleAdminLogout} adminEmail={adminUsername} />
     ) : (
         <AdminLogin onLogin={handleAdminLogin} />
     );
