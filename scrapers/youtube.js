@@ -1,5 +1,5 @@
 // FILE: scrapers/youtube.js
-// YouTube Scraper Functions
+// YouTube Scraper Functions - CLEAN RESPONSE (NO CREATOR/OWNER INFO)
 
 const axios = require('axios');
 const yts = require('yt-search');
@@ -65,7 +65,6 @@ const fetchDownload = async (url, quality, type) => {
     }
 
     return {
-      status: true,
       url: downloadRes.data.downloadUrl,
       quality: `${quality}${type === 'audio' ? 'kbps' : 'p'}`,
       availableQuality: type === 'audio' ? audioQualities : videoQualities,
@@ -75,17 +74,17 @@ const fetchDownload = async (url, quality, type) => {
 
   } catch (err) {
     console.error('Download error:', err.message);
-    return { status: false, message: 'Download failed' };
+    return { error: 'Download failed' };
   }
 };
 
 // ==========================================
-// EXPORTED FUNCTIONS
+// EXPORTED FUNCTIONS - CLEAN RESPONSE
 // ==========================================
 
 async function ytmp3(link, quality = 128) {
   const id = extractVideoId(link);
-  if (!id) return { status: false, message: 'Invalid YouTube URL' };
+  if (!id) return { error: 'Invalid YouTube URL' };
 
   const finalQuality = audioQualities.includes(+quality) ? +quality : 128;
   const videoUrl = `https://youtube.com/watch?v=${id}`;
@@ -93,20 +92,20 @@ async function ytmp3(link, quality = 128) {
   try {
     const info = await yts(videoUrl);
     const result = await fetchDownload(videoUrl, finalQuality, 'audio');
+    
+    // ✅ CLEAN RESPONSE - No creator/owner info
     return {
-      status: true,
-      creator: '@KaLiYaX',
       metadata: info.all[0],
       download: result
     };
   } catch (e) {
-    return { status: false, message: e.message };
+    return { error: e.message };
   }
 }
 
 async function ytmp4(link, quality = 360) {
   const id = extractVideoId(link);
-  if (!id) return { status: false, message: 'Invalid YouTube URL' };
+  if (!id) return { error: 'Invalid YouTube URL' };
 
   const finalQuality = videoQualities.includes(+quality) ? +quality : 360;
   const videoUrl = `https://youtube.com/watch?v=${id}`;
@@ -114,14 +113,14 @@ async function ytmp4(link, quality = 360) {
   try {
     const info = await yts(videoUrl);
     const result = await fetchDownload(videoUrl, finalQuality, 'video');
+    
+    // ✅ CLEAN RESPONSE - No creator/owner info
     return {
-      status: true,
-      creator: '@KaLiYaX',
       metadata: info.all[0],
       download: result
     };
   } catch (e) {
-    return { status: false, message: e.message };
+    return { error: e.message };
   }
 }
 
@@ -136,17 +135,15 @@ async function transcript(url) {
       }
     }).then(i => i.data);
     
+    // ✅ CLEAN RESPONSE - No creator/owner info
     return {
-      status: true,
-      creator: "@KaLiYaX",
       video_id: res.video_id,
       summarize: res.ai_response,
       transcript: res.transcript
     };
   } catch (e) {
     return {
-      status: false,
-      message: `Failed to get response: ${e.message}`
+      error: `Failed to get response: ${e.message}`
     };
   }
 }
@@ -154,8 +151,8 @@ async function transcript(url) {
 async function playmp3(query, quality = 128) {
   try {
     const searchResult = await search(query);
-    if (!searchResult.status || !searchResult.results.length)
-      return { status: false, message: 'Video not found' };
+    if (!searchResult.results || !searchResult.results.length)
+      return { error: 'Video not found' };
 
     const results = [];
     for (let video of searchResult.results.slice(0, 5)) {
@@ -170,22 +167,21 @@ async function playmp3(query, quality = 128) {
       });
     }
 
+    // ✅ CLEAN RESPONSE - No creator/owner info
     return {
-      status: true,
-      creator: '@KaLiYaX',
       type: 'audio',
       results
     };
   } catch (err) {
-    return { status: false, message: err.message };
+    return { error: err.message };
   }
 }
 
 async function playmp4(query, quality = 360) {
   try {
     const searchResult = await search(query);
-    if (!searchResult.status || !searchResult.results.length)
-      return { status: false, message: 'Video not found' };
+    if (!searchResult.results || !searchResult.results.length)
+      return { error: 'Video not found' };
 
     const results = [];
     for (let video of searchResult.results.slice(0, 5)) {
@@ -200,29 +196,27 @@ async function playmp4(query, quality = 360) {
       });
     }
 
+    // ✅ CLEAN RESPONSE - No creator/owner info
     return {
-      status: true,
-      creator: '@KaLiYaX',
       type: 'video',
       results
     };
   } catch (err) {
-    return { status: false, message: err.message };
+    return { error: err.message };
   }
 }
 
 async function search(query) {
   try {
     let data = await yts(query);
+    
+    // ✅ CLEAN RESPONSE - No creator/owner info
     return {
-      status: true,
-      creator: "@KaLiYaX",
       results: data.all
     };
   } catch (error) {
     return {
-      status: false,
-      message: error.message
+      error: error.message
     };
   }
 }
