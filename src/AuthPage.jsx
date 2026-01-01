@@ -1,6 +1,6 @@
-// FILE: src/AuthPage.jsx - With Admin Link
+// FILE: src/AuthPage.jsx - OAuth Only Authentication (NO REFERRAL SYSTEM)
 
-const { useState } = React;
+const { useState, useEffect } = React;
 
 function AuthPage() {
     const [error, setError] = useState('');
@@ -40,15 +40,17 @@ function AuthPage() {
             const userDoc = await window.firebaseDB.collection('users').doc(user.uid).get();
 
             if (!userDoc.exists) {
+                // New user - create account with bonuses
                 let welcomeBonus = 100;
 
                 try {
                     const settingsDoc = await window.firebaseDB.collection('settings').doc('system').get();
                     if (settingsDoc.exists) {
-                        welcomeBonus = settingsDoc.data().welcomeBonus || 100;
+                        const settings = settingsDoc.data();
+                        welcomeBonus = settings.welcomeBonus || 100;
                     }
                 } catch (settingsError) {
-                    console.warn('Using default bonus');
+                    console.warn('Using default bonus settings');
                 }
 
                 const apiKey = 'kx_live_' + Math.random().toString(36).substring(2, 15) + 
@@ -57,6 +59,7 @@ function AuthPage() {
                 const userName = user.displayName || user.email.split('@')[0];
                 const profilePicture = user.photoURL || generateProfilePicture(userName);
 
+                // Create new user (NO referral code)
                 await window.firebaseDB.collection('users').doc(user.uid).set({
                     name: userName,
                     email: user.email,
@@ -66,13 +69,14 @@ function AuthPage() {
                     bio: '',
                     apiKeyPaused: false,
                     createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-                    lastClaimDate: null,
+                    lastClaimDate: null,  // For daily claim tracking
                     totalCalls: 0,
                     status: 'active',
                     emailVerified: true,
                     oauthProvider: provider
                 });
 
+                // Add signup transaction
                 await window.firebaseDB.collection('users').doc(user.uid).collection('transactions').add({
                     type: 'signup_bonus',
                     amount: welcomeBonus,
@@ -80,26 +84,37 @@ function AuthPage() {
                     timestamp: firebase.firestore.FieldValue.serverTimestamp()
                 });
 
+                // Welcome notification
                 await window.firebaseDB.collection('users').doc(user.uid).collection('notifications').add({
                     type: 'announcement',
                     title: '🎉 Welcome to KaliyaX API!',
-                    message: `Account created! You received ${welcomeBonus} coins.`,
+                    message: `Account created! You received ${welcomeBonus} coins. Don't forget to claim your daily ${welcomeBonus} coins!`,
                     read: false,
                     timestamp: firebase.firestore.FieldValue.serverTimestamp()
                 });
 
-                console.log(`✅ New user: ${user.email}`);
+                console.log(`✅ New user created: ${user.email} with ${welcomeBonus} coins`);
             } else {
+                // Existing user - check if suspended
                 if (userDoc.data().status === 'suspended') {
                     await window.firebaseAuth.signOut();
-                    setError('Account suspended. Contact support.');
+                    setError('Your account has been suspended. Contact support.');
                     setLoading(false);
                     return;
                 }
+                console.log(`✅ User logged in: ${user.email}`);
             }
         } catch (err) {
             console.error('OAuth error:', err);
-            setError(err.message || 'Login failed');
+            if (err.code === 'auth/popup-closed-by-user') {
+                setError('Sign-in cancelled');
+            } else if (err.code === 'auth/account-exists-with-different-credential') {
+                setError('Account already exists with this email using a different login method');
+            } else if (err.code === 'auth/popup-blocked') {
+                setError('Popup blocked. Please allow popups for this site.');
+            } else {
+                setError(err.message || 'Login failed. Please try again.');
+            }
         } finally {
             setLoading(false);
         }
@@ -116,7 +131,7 @@ function AuthPage() {
                             <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-pink-600 rounded-lg flex items-center justify-center font-bold text-xl">K</div>
                             <span className="text-xl font-bold">KaliyaX API</span>
                         </div>
-                        <a href="?admin=true" className="text-slate-400 hover:text-white text-sm transition-colors">
+                        <a href="admin.html" className="text-slate-400 hover:text-white text-sm transition-colors">
                             Admin Login
                         </a>
                     </div>
@@ -131,12 +146,17 @@ function AuthPage() {
                                 K
                             </div>
                             <h2 className="text-3xl font-bold mb-2">Welcome to KaliyaX</h2>
-                            <p className="text-slate-400">Sign in to access powerful APIs</p>
+                            <p className="text-slate-400">
+                                Sign in to access powerful API services
+                            </p>
                         </div>
 
                         {error && (
-                            <div className="mb-6 p-3 bg-red-500/10 border border-red-500/30 rounded-lg text-red-400 text-sm">
-                                {error}
+                            <div className="mb-6 p-3 bg-red-500/10 border border-red-500/30 rounded-lg text-red-400 text-sm flex items-center space-x-2">
+                                <svg className="w-5 h-5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                                </svg>
+                                <span>{error}</span>
                             </div>
                         )}
 
@@ -144,7 +164,7 @@ function AuthPage() {
                             <button 
                                 onClick={() => handleOAuthLogin('google')}
                                 disabled={loading}
-                                className="w-full py-3 bg-white hover:bg-gray-100 text-gray-800 rounded-lg font-semibold transition-all disabled:opacity-50 flex items-center justify-center space-x-3 border shadow-sm"
+                                className="w-full py-3 bg-white hover:bg-gray-100 text-gray-800 rounded-lg font-semibold transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-3 border border-gray-300 shadow-sm"
                             >
                                 {loading ? (
                                     <div className="w-5 h-5 border-2 border-gray-400 border-t-transparent rounded-full animate-spin"></div>
@@ -155,7 +175,7 @@ function AuthPage() {
                                             <path fill="#4285F4" d="M12 20a7.48 7.48 0 0 0 5.26-1.93l-2.56-1.99A4.73 4.73 0 0 1 7.5 12H4.53v2.58A7.5 7.5 0 0 0 12 20z"/>
                                             <path fill="#FBBC05" d="M7.5 12a4.5 4.5 0 0 1 0-2.92V6.5H4.53a7.5 7.5 0 0 0 0 7.08z"/>
                                             <path fill="#34A853" d="M12 7.5c1.16 0 2.19.4 3.01 1.18l2.26-2.26A7.5 7.5 0 0 0 4.53 9.08L7.5 11.5A4.48 4.48 0 0 1 12 7.5z"/>
-                                        </svg>
+                        </svg>
                                         <span>Continue with Google</span>
                                     </>
                                 )}
@@ -164,7 +184,7 @@ function AuthPage() {
                             <button 
                                 onClick={() => handleOAuthLogin('facebook')}
                                 disabled={loading}
-                                className="w-full py-3 bg-[#1877F2] hover:bg-[#166FE5] text-white rounded-lg font-semibold transition-all disabled:opacity-50 flex items-center justify-center space-x-3"
+                                className="w-full py-3 bg-[#1877F2] hover:bg-[#166FE5] text-white rounded-lg font-semibold transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-3 shadow-sm"
                             >
                                 {loading ? (
                                     <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
@@ -181,7 +201,7 @@ function AuthPage() {
                             <button 
                                 onClick={() => handleOAuthLogin('github')}
                                 disabled={loading}
-                                className="w-full py-3 bg-[#24292e] hover:bg-[#1b1f23] text-white rounded-lg font-semibold transition-all disabled:opacity-50 flex items-center justify-center space-x-3"
+                                className="w-full py-3 bg-[#24292e] hover:bg-[#1b1f23] text-white rounded-lg font-semibold transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-3 shadow-sm"
                             >
                                 {loading ? (
                                     <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
@@ -197,15 +217,20 @@ function AuthPage() {
                         </div>
 
                         <div className="mt-6 text-center text-slate-400 text-sm">
-                            <p>By continuing, you agree to our Terms & Privacy</p>
+                            <p>By continuing, you agree to our</p>
+                            <div className="flex items-center justify-center space-x-2 mt-1">
+                                <a href="#" className="text-purple-400 hover:text-purple-300">Terms</a>
+                                <span>•</span>
+                                <a href="#" className="text-purple-400 hover:text-purple-300">Privacy</a>
+                            </div>
                         </div>
                     </div>
 
                     <div className="mt-6 text-center">
                         <div className="bg-blue-500/10 border border-blue-500/30 rounded-lg p-4">
                             <p className="text-blue-400 text-sm">
-                                ✨ Get <span className="font-bold">100 coins</span> bonus!<br/>
-                                🎁 Claim <span className="font-bold">100 coins daily</span>!
+                                ✨ Sign up now and get <span className="font-bold">100 coins</span> bonus!<br/>
+                                🎁 Plus claim <span className="font-bold">100 coins daily</span>!
                             </p>
                         </div>
                     </div>
