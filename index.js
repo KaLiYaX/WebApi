@@ -1,4 +1,4 @@
-// FILE: index.js - Main Express Server with Clean Routes
+// FILE: index.js - Main Express Server with Browser Support
 
 const express = require('express');
 const cors = require('cors');
@@ -137,6 +137,21 @@ function getApiKey(req) {
   return apiKey;
 }
 
+// ✅ Clean response function - removes usage info and extra fields
+function cleanResponse(data) {
+  if (!data) return data;
+  
+  // Remove creator/owner/status fields
+  const cleanData = JSON.parse(JSON.stringify(data));
+  
+  // Remove common metadata fields
+  delete cleanData.status;
+  delete cleanData.creator;
+  delete cleanData.owner;
+  
+  return cleanData;
+}
+
 function handleApiResponse(res, auth, data, error = null) {
   if (!auth.success) {
     return res.status(auth.code || 500).json({
@@ -148,18 +163,27 @@ function handleApiResponse(res, auth, data, error = null) {
   }
 
   if (error) {
-    return res.status(500).json({ success: false, error: error });
+    return res.status(500).json({ 
+      success: false, 
+      error: error 
+    });
   }
 
-  const response = { success: true, data: data };
+  // ✅ Clean the response data
+  const cleanedData = cleanResponse(data);
 
+  // ✅ Simple response structure
+  const response = {
+    success: true,
+    data: cleanedData
+  };
+
+  // Add usage info only if not in test mode
   if (!auth.testMode) {
     response.usage = {
       coins_used: auth.coinsDeducted,
       remaining_balance: auth.remainingBalance
     };
-  } else {
-    response.test_mode = true;
   }
 
   return res.status(200).json(response);
@@ -196,7 +220,7 @@ app.get('/', (req, res) => {
       }
     },
     authentication: firebaseInitialized ? 'enabled' : 'test mode',
-    documentation: 'https://docs.kaliyax.com'
+    note: 'Include API key in header as x-api-key OR in URL as ?x-api-key=YOUR_KEY for browser testing'
   });
 });
 
@@ -229,7 +253,7 @@ app.get('/api/youtube/search', async (req, res) => {
 
 app.get('/api/youtube/mp3', async (req, res) => {
   try {
-    const apiKey = getApiKey(req); // ✅ Get from header OR query parameter
+    const apiKey = getApiKey(req);
     if (!apiKey && firebaseInitialized) {
       return res.status(401).json({ success: false, error: 'API key required' });
     }
@@ -251,7 +275,7 @@ app.get('/api/youtube/mp3', async (req, res) => {
 
 app.get('/api/youtube/mp4', async (req, res) => {
   try {
-    const apiKey = getApiKey(req); // ✅ Get from header OR query parameter
+    const apiKey = getApiKey(req);
     if (!apiKey && firebaseInitialized) {
       return res.status(401).json({ success: false, error: 'API key required' });
     }
@@ -273,7 +297,7 @@ app.get('/api/youtube/mp4', async (req, res) => {
 
 app.get('/api/youtube/transcript', async (req, res) => {
   try {
-    const apiKey = getApiKey(req); // ✅ Get from header OR query parameter
+    const apiKey = getApiKey(req);
     if (!apiKey && firebaseInitialized) {
       return res.status(401).json({ success: false, error: 'API key required' });
     }
@@ -295,7 +319,7 @@ app.get('/api/youtube/transcript', async (req, res) => {
 
 app.get('/api/youtube/playmp3', async (req, res) => {
   try {
-    const apiKey = getApiKey(req); // ✅ Get from header OR query parameter
+    const apiKey = getApiKey(req);
     if (!apiKey && firebaseInitialized) {
       return res.status(401).json({ success: false, error: 'API key required' });
     }
@@ -317,7 +341,7 @@ app.get('/api/youtube/playmp3', async (req, res) => {
 
 app.get('/api/youtube/playmp4', async (req, res) => {
   try {
-    const apiKey = getApiKey(req); // ✅ Get from header OR query parameter
+    const apiKey = getApiKey(req);
     if (!apiKey && firebaseInitialized) {
       return res.status(401).json({ success: false, error: 'API key required' });
     }
@@ -346,7 +370,7 @@ app.get('/api/movie/cinesubz-search', async (req, res) => {
   res.set('Access-Control-Allow-Origin', '*');
   
   try {
-    const apiKey = req.headers['x-api-key'];
+    const apiKey = getApiKey(req);
     if (!apiKey && firebaseInitialized) {
       return res.status(401).json({ success: false, error: 'API key required' });
     }
@@ -380,7 +404,7 @@ app.get('/api/movie/cinesubz-info', async (req, res) => {
   res.set('Access-Control-Allow-Origin', '*');
   
   try {
-    const apiKey = req.headers['x-api-key'];
+    const apiKey = getApiKey(req);
     if (!apiKey && firebaseInitialized) {
       return res.status(401).json({ success: false, error: 'API key required' });
     }
@@ -414,7 +438,7 @@ app.get('/api/tv/cinesubz-info', async (req, res) => {
   res.set('Access-Control-Allow-Origin', '*');
   
   try {
-    const apiKey = req.headers['x-api-key'];
+    const apiKey = getApiKey(req);
     if (!apiKey && firebaseInitialized) {
       return res.status(401).json({ success: false, error: 'API key required' });
     }
@@ -448,7 +472,7 @@ app.get('/api/episode/cinesubz-info', async (req, res) => {
   res.set('Access-Control-Allow-Origin', '*');
   
   try {
-    const apiKey = req.headers['x-api-key'];
+    const apiKey = getApiKey(req);
     if (!apiKey && firebaseInitialized) {
       return res.status(401).json({ success: false, error: 'API key required' });
     }
@@ -482,7 +506,7 @@ app.get('/api/movie/cinesubz-download', async (req, res) => {
   res.set('Access-Control-Allow-Origin', '*');
   
   try {
-    const apiKey = req.headers['x-api-key'];
+    const apiKey = getApiKey(req);
     if (!apiKey && firebaseInitialized) {
       return res.status(401).json({ success: false, error: 'API key required' });
     }
@@ -516,7 +540,7 @@ app.get('/api/darkshan/*', async (req, res) => {
   res.set('Access-Control-Allow-Origin', '*');
   
   try {
-    const apiKey = req.headers['x-api-key'];
+    const apiKey = getApiKey(req);
     if (!apiKey && firebaseInitialized) {
       return res.status(401).json({ success: false, error: 'API key required' });
     }
@@ -549,5 +573,6 @@ app.get('/api/darkshan/*', async (req, res) => {
 app.listen(port, () => {
   console.log(`🚀 Server running on http://localhost:${port}`);
   console.log(`🔐 Authentication: ${firebaseInitialized ? 'ENABLED' : 'TEST MODE'}`);
+  console.log(`🌐 Browser support: Include API key as ?x-api-key=YOUR_KEY in URL`);
   console.log(`✅ All routes loaded`);
 });
