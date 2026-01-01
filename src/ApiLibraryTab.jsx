@@ -299,7 +299,11 @@ function ApiLibraryTab() {
 
                 const response = await fetch(url.toString(), { headers });
                 const data = await response.json();
-                setTestResult({ status: response.status, data, url: url.toString() });
+                
+                // ✅ Extract only "data" field from response
+                const cleanData = data?.data || data;
+                
+                setTestResult({ status: response.status, data: cleanData, url: url.toString() });
             } else {
                 const response = await fetch(url.toString(), {
                     method: 'POST',
@@ -307,7 +311,11 @@ function ApiLibraryTab() {
                     body: JSON.stringify(testParams)
                 });
                 const data = await response.json();
-                setTestResult({ status: response.status, data, url: url.toString() });
+                
+                // ✅ Extract only "data" field from response
+                const cleanData = data?.data || data;
+                
+                setTestResult({ status: response.status, data: cleanData, url: url.toString() });
             }
 
             await loadUserData();
@@ -325,6 +333,8 @@ function ApiLibraryTab() {
 
     const copyResponse = () => {
         if (!testResult) return;
+        
+        // ✅ Copy only the clean data
         const responseText = JSON.stringify(testResult.data, null, 2);
         navigator.clipboard.writeText(responseText);
         setCopiedResponse(true);
@@ -333,12 +343,28 @@ function ApiLibraryTab() {
 
     const openResponseUrl = () => {
         if (!testResult || !testResult.url) return;
-        window.open(testResult.url, '_blank');
+        
+        // ✅ Add user API key to URL
+        const url = new URL(testResult.url);
+        
+        // Check if URL already has x-api-key as a query parameter
+        if (!url.searchParams.has('apikey') && !url.searchParams.has('x-api-key')) {
+            // Add as header-style (most common)
+            const urlWithKey = `${testResult.url}${testResult.url.includes('?') ? '&' : '?'}x-api-key=${userData.apiKey}`;
+            window.open(urlWithKey, '_blank');
+        } else {
+            window.open(testResult.url, '_blank');
+        }
     };
 
     const extractDownloadUrl = (data) => {
-        if (data?.data?.download?.url) return data.data.download.url;
+        // ✅ Extract download URL from cleaned data
         if (data?.download?.url) return data.download.url;
+        if (data?.results && Array.isArray(data.results) && data.results[0]?.download?.url) {
+            return data.results[0].download.url;
+        }
+        // Check for nested data field (in case of partial cleaning)
+        if (data?.data?.download?.url) return data.data.download.url;
         if (data?.data?.results && Array.isArray(data.data.results) && data.data.results[0]?.download?.url) {
             return data.data.results[0].download.url;
         }
@@ -629,6 +655,7 @@ function ApiLibraryTab() {
                                             <button
                                                 onClick={openResponseUrl}
                                                 className="px-3 py-2 bg-purple-600 hover:bg-purple-700 rounded-lg text-sm font-semibold flex items-center space-x-2"
+                                                title="Open URL with your API key"
                                             >
                                                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
@@ -637,6 +664,15 @@ function ApiLibraryTab() {
                                             </button>
                                         </div>
                                     </div>
+                                    
+                                    {/* Info Note */}
+                                    <div className="mb-3 p-2 bg-purple-500/10 border border-purple-500/30 rounded text-xs text-purple-400 flex items-center space-x-2">
+                                        <svg className="w-4 h-4 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                                            <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+                                        </svg>
+                                        <span>💡 "Open URL" will include your API key for direct browser testing</span>
+                                    </div>
+                                    
                                     <div className={`bg-slate-950/50 rounded-lg p-4 border ${
                                         testResult.status >= 200 && testResult.status < 300 ? 'border-green-500/30' : 'border-red-500/30'
                                     }`}>
