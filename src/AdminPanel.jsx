@@ -1,4 +1,9 @@
-function AdminPanel({ onLogout }) {
+// FILE: src/AdminPanel.jsx (PART 1/2)
+// Complete Admin Panel with All Features
+
+const { useState, useEffect } = React;
+
+function AdminPanel({ onLogout, adminEmail }) {
     const [users, setUsers] = useState([]);
     const [loading, setLoading] = useState(true);
     const [selectedUser, setSelectedUser] = useState(null);
@@ -18,7 +23,8 @@ function AdminPanel({ onLogout }) {
     const [settings, setSettings] = useState({
         apiCostPerCall: 5,
         referralBonus: 60,
-        welcomeBonus: 100
+        welcomeBonus: 100,
+        dailyClaimCoins: 100
     });
     const [stats, setStats] = useState({
         totalUsers: 0,
@@ -82,14 +88,15 @@ function AdminPanel({ onLogout }) {
                 setSettings({
                     apiCostPerCall: data.apiCostPerCall || 5,
                     referralBonus: data.referralBonus || 60,
-                    welcomeBonus: data.welcomeBonus || 100
+                    welcomeBonus: data.welcomeBonus || 100,
+                    dailyClaimCoins: data.dailyClaimCoins || 100
                 });
             } else {
-                // Create default settings
                 await window.firebaseDB.collection('settings').doc('system').set({
                     apiCostPerCall: 5,
                     referralBonus: 60,
                     welcomeBonus: 100,
+                    dailyClaimCoins: 100,
                     updatedAt: firebase.firestore.FieldValue.serverTimestamp()
                 });
             }
@@ -100,32 +107,32 @@ function AdminPanel({ onLogout }) {
 
     const updateSettings = async () => {
         try {
-            // Validate inputs
             const apiCost = parseInt(settings.apiCostPerCall);
             const refBonus = parseInt(settings.referralBonus);
             const welcomeBonus = parseInt(settings.welcomeBonus);
+            const dailyClaim = parseInt(settings.dailyClaimCoins);
 
-            if (isNaN(apiCost) || isNaN(refBonus) || isNaN(welcomeBonus)) {
+            if (isNaN(apiCost) || isNaN(refBonus) || isNaN(welcomeBonus) || isNaN(dailyClaim)) {
                 alert('❌ Please enter valid numbers!');
                 return;
             }
 
-            if (apiCost < 1 || refBonus < 0 || welcomeBonus < 0) {
+            if (apiCost < 1 || refBonus < 0 || welcomeBonus < 0 || dailyClaim < 0) {
                 alert('❌ Values must be positive!');
                 return;
             }
 
-            // Update settings in Firestore
             await window.firebaseDB.collection('settings').doc('system').set({
                 apiCostPerCall: apiCost,
                 referralBonus: refBonus,
                 welcomeBonus: welcomeBonus,
+                dailyClaimCoins: dailyClaim,
                 updatedAt: firebase.firestore.FieldValue.serverTimestamp()
             }, { merge: true });
 
             alert('✅ Settings updated successfully!');
             setShowSettings(false);
-            await loadSettings(); // Reload to confirm
+            await loadSettings();
         } catch (error) {
             console.error('Error updating settings:', error);
             alert('❌ Failed to update settings: ' + error.message);
@@ -147,7 +154,7 @@ function AdminPanel({ onLogout }) {
             
             await window.firebaseDB.collection('users').doc(selectedUser.id).collection('notifications').add({
                 type: 'coin_reward',
-                title: 'Coin Reward',
+                title: '💰 Coin Reward from Admin',
                 message: `You have received ${amount} coins from admin. Click to claim!`,
                 amount: amount,
                 claimed: false,
@@ -194,8 +201,8 @@ function AdminPanel({ onLogout }) {
             });
 
             await window.firebaseDB.collection('users').doc(selectedUser.id).collection('notifications').add({
-                type: 'info',
-                title: 'Coins Deducted',
+                type: 'warning',
+                title: '⚠️ Coins Deducted',
                 message: `Admin deducted ${amount} coins. Reason: ${deductReason || 'Not specified'}`,
                 read: false,
                 timestamp: firebase.firestore.FieldValue.serverTimestamp()
@@ -234,7 +241,7 @@ function AdminPanel({ onLogout }) {
                 const notifRef = window.firebaseDB.collection('users').doc(user.id).collection('notifications').doc();
                 batch.set(notifRef, {
                     type: 'coin_reward',
-                    title: 'Bulk Coin Reward',
+                    title: '🎁 Bulk Coin Reward',
                     message: `You have received ${amount} coins from admin. Click to claim!`,
                     amount: amount,
                     claimed: false,
@@ -311,7 +318,7 @@ function AdminPanel({ onLogout }) {
 
             await window.firebaseDB.collection('users').doc(userId).collection('notifications').add({
                 type: 'warning',
-                title: newStatus === 'suspended' ? 'Account Suspended' : 'Account Activated',
+                title: newStatus === 'suspended' ? '🚫 Account Suspended' : '✅ Account Activated',
                 message: newStatus === 'suspended' 
                     ? 'Your account has been suspended by admin' 
                     : 'Your account has been activated',
@@ -345,16 +352,52 @@ function AdminPanel({ onLogout }) {
     };
 
     const deleteUser = async (userId, userEmail) => {
-        if (!confirm(`Are you sure you want to delete user: ${userEmail}?`)) return;
+        if (!confirm(`⚠️ DELETE USER: ${userEmail}?\n\nThis will:\n- Delete user account\n- Delete all transactions\n- Delete all notifications\n- CANNOT BE UNDONE!\n\nType "DELETE" to confirm.`)) {
+            return;
+        }
+
+        const confirmation = prompt('Type DELETE to confirm:');
+        if (confirmation !== 'DELETE') {
+            alert('❌ Deletion cancelled');
+            return;
+        }
 
         try {
+            // Delete subcollections first
+            const transactionsSnapshot = await window.firebaseDB
+                .collection('users')
+                .doc(userId)
+                .collection('transactions')
+                .get();
+            
+            const notificationsSnapshot = await window.firebaseDB
+                .collection('users')
+                .doc(userId)
+                .collection('notifications')
+                .get();
+
+            const batch = window.firebaseDB.batch();
+
+            transactionsSnapshot.docs.forEach(doc => {
+                batch.delete(doc.ref);
+            });
+
+            notificationsSnapshot.docs.forEach(doc => {
+                batch.delete(doc.ref);
+            });
+
+            await batch.commit();
+
+            // Delete user document
             await window.firebaseDB.collection('users').doc(userId).delete();
+
             alert('✅ User deleted successfully!');
+            setShowUserDetails(false);
             loadUsers();
             loadStats();
         } catch (error) {
             console.error('Error deleting user:', error);
-            alert('❌ Failed to delete user!');
+            alert('❌ Failed to delete user: ' + error.message);
         }
     };
 
@@ -374,29 +417,36 @@ function AdminPanel({ onLogout }) {
         );
     }
 
+
+// PART 2/2 - AdminPanel JSX Return
+
     return (
         <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 text-white">
             <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiMyMTIxMjEiIGZpbGwtb3BhY2l0eT0iMC4xIj48cGF0aCBkPSJNMzYgMzBoLTJWMGgydjMwem0wIDMwdi0yaDJWNjBoLTJ6TTAgMzZoMzB2Mkgwdi0yem0zMCAwaDMwdjJIMzB2LTJ6Ij48L3BhdGg+PC9nPjwvZz48L3N2Zz4=')] opacity-20"></div>
 
+            {/* Navigation */}
             <nav className="relative z-10 border-b border-slate-800 bg-slate-950/50 backdrop-blur-xl sticky top-0">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
                     <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
                         <div className="flex items-center space-x-2">
                             <div className="w-10 h-10 bg-gradient-to-br from-red-500 to-orange-600 rounded-lg flex items-center justify-center font-bold text-xl">A</div>
-                            <span className="text-xl font-bold">Admin Panel</span>
+                            <div>
+                                <span className="text-xl font-bold">Admin Panel</span>
+                                <p className="text-xs text-slate-400">{adminEmail}</p>
+                            </div>
                         </div>
                         <div className="flex flex-wrap items-center justify-center gap-2">
                             <button onClick={() => setShowBulkCoins(true)} className="px-3 py-2 bg-green-600 hover:bg-green-700 rounded-lg transition-colors text-xs sm:text-sm">
-                                Bulk Coins
+                                💰 Bulk Coins
                             </button>
                             <button onClick={() => { setNotificationType('all'); setShowSendNotification(true); }} className="px-3 py-2 bg-purple-600 hover:bg-purple-700 rounded-lg transition-colors text-xs sm:text-sm">
-                                Notification
+                                📢 Notification
                             </button>
                             <button onClick={() => setShowSettings(true)} className="px-3 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors text-xs sm:text-sm">
-                                Settings
+                                ⚙️ Settings
                             </button>
                             <button onClick={onLogout} className="px-3 py-2 bg-red-600 hover:bg-red-700 rounded-lg transition-colors text-xs sm:text-sm">
-                                Logout
+                                🚪 Logout
                             </button>
                         </div>
                     </div>
@@ -404,8 +454,9 @@ function AdminPanel({ onLogout }) {
             </nav>
 
             <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-                <h1 className="text-2xl sm:text-3xl font-bold mb-8">Admin Dashboard</h1>
+                <h1 className="text-2xl sm:text-3xl font-bold mb-8">📊 Dashboard</h1>
 
+                {/* Stats Cards */}
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4 sm:gap-6 mb-8">
                     <div className="bg-slate-900/80 backdrop-blur-xl rounded-xl border border-slate-800 p-4 sm:p-6">
                         <div className="text-slate-400 text-xs sm:text-sm mb-2">Total Users</div>
@@ -425,9 +476,10 @@ function AdminPanel({ onLogout }) {
                     </div>
                 </div>
 
+                {/* User Management Table */}
                 <div className="bg-slate-900/80 backdrop-blur-xl rounded-2xl border border-slate-800 p-4 sm:p-6">
                     <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mb-6">
-                        <h2 className="text-xl sm:text-2xl font-bold">User Management</h2>
+                        <h2 className="text-xl sm:text-2xl font-bold">👥 User Management</h2>
                         <input 
                             type="text"
                             placeholder="Search users..."
@@ -480,7 +532,7 @@ function AdminPanel({ onLogout }) {
                                                     className="px-2 py-1 bg-blue-600 hover:bg-blue-700 rounded text-xs"
                                                     title="View Details"
                                                 >
-                                                    View
+                                                    👁️
                                                 </button>
                                                 <button 
                                                     onClick={() => { setSelectedUser(user); setShowAddCoins(true); }}
@@ -505,7 +557,7 @@ function AdminPanel({ onLogout }) {
                                                     }`}
                                                     title={user.status === 'active' ? 'Suspend' : 'Activate'}
                                                 >
-                                                    {user.status === 'active' ? 'Ban' : 'OK'}
+                                                    {user.status === 'active' ? '🚫' : '✅'}
                                                 </button>
                                             </div>
                                         </td>
@@ -517,11 +569,13 @@ function AdminPanel({ onLogout }) {
                 </div>
             </div>
 
+            {/* MODALS */}
+            
             {/* Settings Modal */}
             {showSettings && (
                 <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50" onClick={() => setShowSettings(false)}>
                     <div className="bg-slate-900 rounded-2xl border border-slate-800 p-6 sm:p-8 max-w-md w-full" onClick={(e) => e.stopPropagation()}>
-                        <h2 className="text-xl sm:text-2xl font-bold mb-6">System Settings</h2>
+                        <h2 className="text-xl sm:text-2xl font-bold mb-6">⚙️ System Settings</h2>
                         
                         <div className="space-y-4">
                             <div>
@@ -557,31 +611,38 @@ function AdminPanel({ onLogout }) {
                                 />
                             </div>
 
+                            <div>
+                                <label className="block text-slate-400 text-sm mb-2">Daily Claim Coins</label>
+                                <input 
+                                    type="number"
+                                    value={settings.dailyClaimCoins}
+                                    onChange={(e) => setSettings({...settings, dailyClaimCoins: e.target.value})}
+                                    className="w-full px-4 py-3 bg-slate-950/50 border border-slate-700 rounded-lg outline-none"
+                                    min="0"
+                                />
+                            </div>
+
                             <div className="bg-blue-500/10 border border-blue-500/30 rounded-lg p-3 text-sm text-blue-400">
-                                💡 These settings affect all new signups and referrals
+                                💡 These settings affect all new signups and daily claims
                             </div>
                         </div>
 
                         <div className="flex flex-col sm:flex-row gap-3 mt-6">
-                            <button onClick={updateSettings} className="flex-1 py-3 bg-blue-600 hover:bg-blue-700 rounded-lg">Save Changes</button>
-                            <button onClick={() => setShowSettings(false)} className="flex-1 py-3 bg-slate-800 hover:bg-slate-700 rounded-lg">Cancel</button>
+                            <button onClick={updateSettings} className="flex-1 py-3 bg-blue-600 hover:bg-blue-700 rounded-lg">💾 Save</button>
+                            <button onClick={() => setShowSettings(false)} className="flex-1 py-3 bg-slate-800 hover:bg-slate-700 rounded-lg">❌ Cancel</button>
                         </div>
                     </div>
                 </div>
             )}
 
-            {/* Other modals remain the same... */}
-            {/* Add Coins, Deduct Coins, Bulk Coins, Send Notification, User Details modals */}
-            {/* Copy from original code */}
-            
             {/* Add Coins Modal */}
             {showAddCoins && (
                 <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50" onClick={() => setShowAddCoins(false)}>
                     <div className="bg-slate-900 rounded-2xl border border-slate-800 p-6 sm:p-8 max-w-md w-full" onClick={(e) => e.stopPropagation()}>
-                        <h2 className="text-xl sm:text-2xl font-bold mb-6">Add Coins (Notification)</h2>
+                        <h2 className="text-xl sm:text-2xl font-bold mb-6">💰 Add Coins (Notification)</h2>
                         
                         <div className="mb-4 p-3 bg-blue-500/10 border border-blue-500/30 rounded-lg text-blue-400 text-sm">
-                            This will send a notification to the user. They need to claim it.
+                            This will send a notification. User needs to claim it.
                         </div>
 
                         <div className="space-y-4">
@@ -609,8 +670,8 @@ function AdminPanel({ onLogout }) {
                         </div>
 
                         <div className="flex flex-col sm:flex-row gap-3 mt-6">
-                            <button onClick={addCoins} className="flex-1 py-3 bg-green-600 hover:bg-green-700 rounded-lg">Send Reward</button>
-                            <button onClick={() => { setShowAddCoins(false); setCoinAmount(''); }} className="flex-1 py-3 bg-slate-800 hover:bg-slate-700 rounded-lg">Cancel</button>
+                            <button onClick={addCoins} className="flex-1 py-3 bg-green-600 hover:bg-green-700 rounded-lg">🎁 Send Reward</button>
+                            <button onClick={() => { setShowAddCoins(false); setCoinAmount(''); }} className="flex-1 py-3 bg-slate-800 hover:bg-slate-700 rounded-lg">❌ Cancel</button>
                         </div>
                     </div>
                 </div>
@@ -620,7 +681,7 @@ function AdminPanel({ onLogout }) {
             {showDeductCoins && (
                 <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50" onClick={() => setShowDeductCoins(false)}>
                     <div className="bg-slate-900 rounded-2xl border border-slate-800 p-6 sm:p-8 max-w-md w-full" onClick={(e) => e.stopPropagation()}>
-                        <h2 className="text-xl sm:text-2xl font-bold mb-6">Deduct Coins</h2>
+                        <h2 className="text-xl sm:text-2xl font-bold mb-6">⚠️ Deduct Coins</h2>
                         
                         <div className="space-y-4">
                             <div>
@@ -659,8 +720,8 @@ function AdminPanel({ onLogout }) {
                         </div>
 
                         <div className="flex flex-col sm:flex-row gap-3 mt-6">
-                            <button onClick={deductCoins} className="flex-1 py-3 bg-orange-600 hover:bg-orange-700 rounded-lg">Deduct Coins</button>
-                            <button onClick={() => { setShowDeductCoins(false); setCoinAmount(''); setDeductReason(''); }} className="flex-1 py-3 bg-slate-800 hover:bg-slate-700 rounded-lg">Cancel</button>
+                            <button onClick={deductCoins} className="flex-1 py-3 bg-orange-600 hover:bg-orange-700 rounded-lg">➖ Deduct</button>
+                            <button onClick={() => { setShowDeductCoins(false); setCoinAmount(''); setDeductReason(''); }} className="flex-1 py-3 bg-slate-800 hover:bg-slate-700 rounded-lg">❌ Cancel</button>
                         </div>
                     </div>
                 </div>
@@ -670,10 +731,10 @@ function AdminPanel({ onLogout }) {
             {showBulkCoins && (
                 <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50" onClick={() => setShowBulkCoins(false)}>
                     <div className="bg-slate-900 rounded-2xl border border-slate-800 p-6 sm:p-8 max-w-md w-full" onClick={(e) => e.stopPropagation()}>
-                        <h2 className="text-xl sm:text-2xl font-bold mb-6">Bulk Coin Reward</h2>
+                        <h2 className="text-xl sm:text-2xl font-bold mb-6">🎁 Bulk Coin Reward</h2>
                         
                         <div className="mb-4 p-3 bg-yellow-500/10 border border-yellow-500/30 rounded-lg text-yellow-400 text-sm">
-                            This will send notifications to ALL {users.length} users!
+                            ⚠️ This will send notifications to ALL {users.length} users!
                         </div>
 
                         <div className="space-y-4">
@@ -702,8 +763,8 @@ function AdminPanel({ onLogout }) {
                         </div>
 
                         <div className="flex flex-col sm:flex-row gap-3 mt-6">
-                            <button onClick={sendBulkCoins} className="flex-1 py-3 bg-green-600 hover:bg-green-700 rounded-lg">Send to All</button>
-                            <button onClick={() => { setShowBulkCoins(false); setBulkCoinAmount(''); }} className="flex-1 py-3 bg-slate-800 hover:bg-slate-700 rounded-lg">Cancel</button>
+                            <button onClick={sendBulkCoins} className="flex-1 py-3 bg-green-600 hover:bg-green-700 rounded-lg">📤 Send to All</button>
+                            <button onClick={() => { setShowBulkCoins(false); setBulkCoinAmount(''); }} className="flex-1 py-3 bg-slate-800 hover:bg-slate-700 rounded-lg">❌ Cancel</button>
                         </div>
                     </div>
                 </div>
@@ -713,7 +774,7 @@ function AdminPanel({ onLogout }) {
             {showSendNotification && (
                 <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50" onClick={() => setShowSendNotification(false)}>
                     <div className="bg-slate-900 rounded-2xl border border-slate-800 p-6 sm:p-8 max-w-md w-full" onClick={(e) => e.stopPropagation()}>
-                        <h2 className="text-xl sm:text-2xl font-bold mb-6">Send Notification</h2>
+                        <h2 className="text-xl sm:text-2xl font-bold mb-6">📢 Send Notification</h2>
                         
                         <div className="space-y-4">
                             <div>
@@ -764,8 +825,8 @@ function AdminPanel({ onLogout }) {
                         </div>
 
                         <div className="flex flex-col sm:flex-row gap-3 mt-6">
-                            <button onClick={sendNotification} className="flex-1 py-3 bg-purple-600 hover:bg-purple-700 rounded-lg">Send</button>
-                            <button onClick={() => { setShowSendNotification(false); setNotificationTitle(''); setNotificationMessage(''); }} className="flex-1 py-3 bg-slate-800 hover:bg-slate-700 rounded-lg">Cancel</button>
+                            <button onClick={sendNotification} className="flex-1 py-3 bg-purple-600 hover:bg-purple-700 rounded-lg">📨 Send</button>
+                            <button onClick={() => { setShowSendNotification(false); setNotificationTitle(''); setNotificationMessage(''); }} className="flex-1 py-3 bg-slate-800 hover:bg-slate-700 rounded-lg">❌ Cancel</button>
                         </div>
                     </div>
                 </div>
@@ -775,7 +836,7 @@ function AdminPanel({ onLogout }) {
             {showUserDetails && selectedUser && (
                 <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50 overflow-y-auto" onClick={() => setShowUserDetails(false)}>
                     <div className="bg-slate-900 rounded-2xl border border-slate-800 p-6 sm:p-8 max-w-2xl w-full my-8" onClick={(e) => e.stopPropagation()}>
-                        <h2 className="text-xl sm:text-2xl font-bold mb-6">User Details</h2>
+                        <h2 className="text-xl sm:text-2xl font-bold mb-6">👤 User Details</h2>
                         
                         <div className="space-y-6">
                             <div className="flex items-center space-x-4">
@@ -814,32 +875,30 @@ function AdminPanel({ onLogout }) {
                                 <div className="text-sm font-mono break-all">{selectedUser.apiKey}</div>
                             </div>
 
-                            <div className="bg-slate-950/50 rounded-lg p-4 border border-slate-800">
-                                <div className="text-slate-400 text-sm mb-2">Referral Code</div>
-                                <div className="text-lg font-bold text-purple-400">{selectedUser.referralCode}</div>
-                            </div>
-
                             <div className="flex flex-wrap gap-3">
                                 <button onClick={() => { setShowUserDetails(false); setShowAddCoins(true); }} className="px-4 py-2 bg-green-600 hover:bg-green-700 rounded-lg text-sm">
-                                    Add Coins
+                                    💰 Add Coins
                                 </button>
                                 <button onClick={() => { setShowUserDetails(false); setShowDeductCoins(true); }} className="px-4 py-2 bg-orange-600 hover:bg-orange-700 rounded-lg text-sm">
-                                    Deduct Coins
+                                    ➖ Deduct Coins
                                 </button>
                                 <button onClick={() => { setNotificationType('single'); setShowUserDetails(false); setShowSendNotification(true); }} className="px-4 py-2 bg-purple-600 hover:bg-purple-700 rounded-lg text-sm">
-                                    Send Notification
+                                    📢 Send Notification
                                 </button>
                                 <button onClick={() => toggleApiKeyPause(selectedUser.id, selectedUser.apiKeyPaused)} className="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg text-sm">
-                                    {selectedUser.apiKeyPaused ? 'Resume API' : 'Pause API'}
+                                    {selectedUser.apiKeyPaused ? '▶️ Resume API' : '⏸️ Pause API'}
                                 </button>
                                 <button onClick={() => toggleUserStatus(selectedUser.id, selectedUser.status)} className={`px-4 py-2 rounded-lg text-sm ${selectedUser.status === 'active' ? 'bg-red-600 hover:bg-red-700' : 'bg-green-600 hover:bg-green-700'}`}>
-                                    {selectedUser.status === 'active' ? 'Suspend' : 'Activate'}
+                                    {selectedUser.status === 'active' ? '🚫 Suspend' : '✅ Activate'}
+                                </button>
+                                <button onClick={() => deleteUser(selectedUser.id, selectedUser.email)} className="px-4 py-2 bg-red-600 hover:bg-red-700 rounded-lg text-sm">
+                                    🗑️ Delete Account
                                 </button>
                             </div>
                         </div>
 
                         <button onClick={() => setShowUserDetails(false)} className="w-full mt-6 py-3 bg-slate-800 hover:bg-slate-700 rounded-lg">
-                            Close
+                            ✖️ Close
                         </button>
                     </div>
                 </div>
