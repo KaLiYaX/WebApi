@@ -14,11 +14,15 @@
       "use": "@vercel/static"
     },
     {
+      "src": "kx.html",
+      "use": "@vercel/static"
+    },
+    {
       "src": "styles.css",
       "use": "@vercel/static"
     },
     {
-      "src": "src/**",
+      "src": "src/**/*.{js,jsx}",
       "use": "@vercel/static"
     }
   ],
@@ -26,6 +30,22 @@
     {
       "src": "/api/(.*)",
       "dest": "/index.js"
+    },
+    {
+      "src": "/admin.html",
+      "dest": "/admin.html"
+    },
+    {
+      "src": "/admin",
+      "dest": "/admin.html"
+    },
+    {
+      "src": "/kx.html",
+      "dest": "/kx.html"
+    },
+    {
+      "src": "/kx",
+      "dest": "/kx.html"
     },
     {
       "src": "/src/(.*)",
@@ -42,6 +62,17 @@
     {
       "src": "/(.*)",
       "dest": "/index.html"
+    }
+  ],
+  "headers": [
+    {
+      "source": "/api/(.*)",
+      "headers": [
+        { "key": "Access-Control-Allow-Credentials", "value": "true" },
+        { "key": "Access-Control-Allow-Origin", "value": "*" },
+        { "key": "Access-Control-Allow-Methods", "value": "GET,OPTIONS,PATCH,DELETE,POST,PUT" },
+        { "key": "Access-Control-Allow-Headers", "value": "X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version, x-api-key" }
+      ]
     }
   ],
   "env": {
