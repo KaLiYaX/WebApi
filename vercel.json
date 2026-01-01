@@ -42,10 +42,6 @@
     {
       "src": "/(.*)",
       "dest": "/index.html"
-    },
-    {
-      "src": "/admin",
-      "dest": "/admin.html"
     }
   ],
   "env": {
