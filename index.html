@@ -6,6 +6,9 @@
     <title>KaliyaX API Portal</title>
     <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>K</text></svg>">
     
+    <!-- Meta Tags -->
+    <meta name="description" content="KaliyaX API Portal - Professional Developer Dashboard">
+    
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     
@@ -22,60 +25,36 @@
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     
     <link rel="stylesheet" href="styles.css">
-    
-    <style>
-        body {
-            margin: 0;
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
-                'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
-            -webkit-font-smoothing: antialiased;
-            -moz-osx-font-smoothing: grayscale;
-        }
-
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(10px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-
-        .animate-fade-in {
-            animation: fadeIn 0.3s ease-out;
-        }
-    </style>
 </head>
 <body>
-    <!-- Single root for both user and admin -->
     <div id="root"></div>
     
-    <!-- Route Detection Script -->
-    <script>
-        // Check if admin panel
-        const urlParams = new URLSearchParams(window.location.search);
-        const isAdmin = urlParams.get('admin') === 'true' || 
-                       window.location.pathname === '/admin' ||
-                       window.location.pathname === '/admin.html' ||
-                       window.location.hash === '#admin';
-        
-        window.isAdminPanel = isAdmin;
-        
-        console.log('🔍 Route:', isAdmin ? 'ADMIN PANEL' : 'USER PORTAL');
-    </script>
-    
     <!-- Firebase Config -->
-    <script type="text/babel" src="./src/config/firebase.js"></script>
-    
-    <!-- Load Components Based on Route -->
     <script type="text/babel">
-        // Check which panel to load
-        if (window.isAdminPanel) {
-            // Load Admin Components
-            console.log('📦 Loading Admin Components...');
-        } else {
-            // Load User Components
-            console.log('📦 Loading User Components...');
+        const firebaseConfig = {
+            apiKey: "AIzaSyCdYlIF1-Zx1TpuiQnnScykdrlEqJYj2MA",
+            authDomain: "kaliyax.firebaseapp.com",
+            projectId: "kaliyax",
+            storageBucket: "kaliyax.firebasestorage.app",
+            messagingSenderId: "46921532670",
+            appId: "1:46921532670:web:af7ff28d4b7152b6f0d1af",
+            measurementId: "G-ENGL9B80X2"
+        };
+
+        if (!firebase.apps.length) {
+            firebase.initializeApp(firebaseConfig);
         }
+
+        const auth = firebase.auth();
+        const db = firebase.firestore();
+
+        window.firebaseAuth = auth;
+        window.firebaseDB = db;
+
+        console.log('✅ Firebase initialized');
     </script>
     
-    <!-- User Components -->
+    <!-- Load All Components -->
     <script type="text/babel" src="./src/Footer.jsx"></script>
     <script type="text/babel" src="./src/NotificationsTab.jsx"></script>
     <script type="text/babel" src="./src/TransactionsTab.jsx"></script>
@@ -84,21 +63,158 @@
     <script type="text/babel" src="./src/UserProfile.jsx"></script>
     <script type="text/babel" src="./src/Dashboard.jsx"></script>
     <script type="text/babel" src="./src/AuthPage.jsx"></script>
-    
-    <!-- Admin Components -->
     <script type="text/babel" src="./src/AdminPanel.jsx"></script>
     <script type="text/babel" src="./src/AdminLogin.jsx"></script>
     
-    <!-- Main App Router -->
+    <!-- Main App with Routing -->
     <script type="text/babel">
         const { useState, useEffect } = React;
         
+        // ==========================================
+        // ADMIN APP COMPONENT
+        // ==========================================
+        function AdminApp() {
+            const [isAdminLoggedIn, setIsAdminLoggedIn] = useState(false);
+            const [loading, setLoading] = useState(true);
+            const [adminEmail, setAdminEmail] = useState(null);
+            
+            const ADMIN_EMAIL = 'kaliya.x.git@gmail.com';
+            
+            useEffect(() => {
+                console.log('🔍 Admin panel checking auth...');
+                
+                const unsubscribe = window.firebaseAuth.onAuthStateChanged((user) => {
+                    console.log('🔐 Auth state:', user ? user.email : 'No user');
+                    
+                    if (user) {
+                        if (user.email === ADMIN_EMAIL) {
+                            console.log('✅ ADMIN ACCESS GRANTED:', user.email);
+                            sessionStorage.setItem('kaliyax_admin_session', 'true');
+                            sessionStorage.setItem('kaliyax_admin_email', user.email);
+                            setIsAdminLoggedIn(true);
+                            setAdminEmail(user.email);
+                        } else {
+                            console.log('❌ ACCESS DENIED:', user.email);
+                            window.firebaseAuth.signOut();
+                            sessionStorage.removeItem('kaliyax_admin_session');
+                            sessionStorage.removeItem('kaliyax_admin_email');
+                            setIsAdminLoggedIn(false);
+                            setAdminEmail(null);
+                            alert(`🚫 ACCESS DENIED!\n\nOnly ${ADMIN_EMAIL} can access admin panel.\n\nYou tried: ${user.email}`);
+                        }
+                    } else {
+                        console.log('👤 No user signed in');
+                        sessionStorage.removeItem('kaliyax_admin_session');
+                        sessionStorage.removeItem('kaliyax_admin_email');
+                        setIsAdminLoggedIn(false);
+                        setAdminEmail(null);
+                    }
+                    
+                    setLoading(false);
+                });
+
+                return () => unsubscribe();
+            }, []);
+
+            const handleAdminLogin = (email) => {
+                console.log('✅ Admin login:', email);
+                if (email === ADMIN_EMAIL) {
+                    sessionStorage.setItem('kaliyax_admin_session', 'true');
+                    sessionStorage.setItem('kaliyax_admin_email', email);
+                    setIsAdminLoggedIn(true);
+                    setAdminEmail(email);
+                } else {
+                    handleAdminLogout();
+                }
+            };
+
+            const handleAdminLogout = async () => {
+                console.log('🔓 Admin logging out');
+                try {
+                    await window.firebaseAuth.signOut();
+                } catch (error) {
+                    console.error('Logout error:', error);
+                }
+                sessionStorage.removeItem('kaliyax_admin_session');
+                sessionStorage.removeItem('kaliyax_admin_email');
+                setIsAdminLoggedIn(false);
+                setAdminEmail(null);
+            };
+
+            if (loading) {
+                return (
+                    <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 flex items-center justify-center">
+                        <div className="text-white text-center">
+                            <div className="w-16 h-16 border-4 border-red-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+                            <p className="text-xl">Loading admin panel...</p>
+                        </div>
+                    </div>
+                );
+            }
+
+            return (isAdminLoggedIn && adminEmail === ADMIN_EMAIL) ? (
+                <AdminPanel onLogout={handleAdminLogout} adminEmail={adminEmail} />
+            ) : (
+                <AdminLogin onLogin={handleAdminLogin} />
+            );
+        }
+        
+        // ==========================================
+        // USER APP COMPONENT
+        // ==========================================
+        function UserApp() {
+            const [user, setUser] = useState(null);
+            const [loading, setLoading] = useState(true);
+
+            useEffect(() => {
+                const unsubscribe = window.firebaseAuth.onAuthStateChanged((currentUser) => {
+                    setUser(currentUser);
+                    setLoading(false);
+                });
+
+                return () => unsubscribe();
+            }, []);
+
+            if (loading) {
+                return (
+                    <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 flex items-center justify-center">
+                        <div className="text-white text-center">
+                            <div className="w-16 h-16 border-4 border-purple-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+                            <p className="text-xl font-semibold">Loading KaliyaX API...</p>
+                        </div>
+                    </div>
+                );
+            }
+
+            return user ? <Dashboard user={user} /> : <AuthPage />;
+        }
+        
+        // ==========================================
+        // MAIN APP WITH ROUTING
+        // ==========================================
         function MainApp() {
+            const [isAdmin, setIsAdmin] = useState(false);
             const [loading, setLoading] = useState(true);
             
             useEffect(() => {
-                // Wait for all components to load
-                setTimeout(() => setLoading(false), 500);
+                // Check URL for admin panel
+                const urlParams = new URLSearchParams(window.location.search);
+                const adminParam = urlParams.get('admin') === 'true';
+                const pathAdmin = window.location.pathname === '/admin' || 
+                                 window.location.pathname === '/admin.html';
+                const hashAdmin = window.location.hash === '#admin';
+                
+                const shouldShowAdmin = adminParam || pathAdmin || hashAdmin;
+                
+                setIsAdmin(shouldShowAdmin);
+                setLoading(false);
+                
+                console.log('🎯 Route detected:', shouldShowAdmin ? 'ADMIN PANEL' : 'USER PORTAL');
+                
+                // Update URL if needed
+                if (shouldShowAdmin && !adminParam) {
+                    window.history.replaceState({}, '', '/?admin=true');
+                }
             }, []);
             
             if (loading) {
@@ -112,103 +228,16 @@
                 );
             }
             
-            // Route to correct panel
-            if (window.isAdminPanel) {
-                return <AdminApp />;
-            } else {
-                return <App />;
-            }
+            return isAdmin ? <AdminApp /> : <UserApp />;
         }
         
-        // Admin App
-        function AdminApp() {
-            const [isAdminLoggedIn, setIsAdminLoggedIn] = useState(false);
-            const [loading, setLoading] = useState(true);
-            const [adminEmail, setAdminEmail] = useState(null);
-            
-            const ADMIN_EMAIL = 'kaliya.x.git@gmail.com';
-            
-            useEffect(() => {
-                const unsubscribe = window.firebaseAuth.onAuthStateChanged((user) => {
-                    if (user) {
-                        if (user.email === ADMIN_EMAIL) {
-                            setIsAdminLoggedIn(true);
-                            setAdminEmail(user.email);
-                        } else {
-                            window.firebaseAuth.signOut();
-                            alert(`Access denied! Only ${ADMIN_EMAIL} can access admin panel.`);
-                        }
-                    }
-                    setLoading(false);
-                });
-                
-                return () => unsubscribe();
-            }, []);
-            
-            const handleAdminLogin = (email) => {
-                if (email === ADMIN_EMAIL) {
-                    setIsAdminLoggedIn(true);
-                    setAdminEmail(email);
-                }
-            };
-            
-            const handleAdminLogout = async () => {
-                await window.firebaseAuth.signOut();
-                setIsAdminLoggedIn(false);
-                setAdminEmail(null);
-            };
-            
-            if (loading) {
-                return (
-                    <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 flex items-center justify-center">
-                        <div className="text-white text-center">
-                            <div className="w-16 h-16 border-4 border-red-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-                            <p className="text-xl">Loading admin panel...</p>
-                        </div>
-                    </div>
-                );
-            }
-            
-            return isAdminLoggedIn ? (
-                <AdminPanel onLogout={handleAdminLogout} adminEmail={adminEmail} />
-            ) : (
-                <AdminLogin onLogin={handleAdminLogin} />
-            );
-        }
-        
-        // User App
-        function App() {
-            const [user, setUser] = useState(null);
-            const [loading, setLoading] = useState(true);
-            
-            useEffect(() => {
-                const unsubscribe = window.firebaseAuth.onAuthStateChanged((currentUser) => {
-                    setUser(currentUser);
-                    setLoading(false);
-                });
-                
-                return () => unsubscribe();
-            }, []);
-            
-            if (loading) {
-                return (
-                    <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 flex items-center justify-center">
-                        <div className="text-white text-center">
-                            <div className="w-16 h-16 border-4 border-purple-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-                            <p className="text-xl font-semibold">Loading KaliyaX API...</p>
-                        </div>
-                    </div>
-                );
-            }
-            
-            return user ? <Dashboard user={user} /> : <AuthPage />;
-        }
-        
-        // Render Main App
+        // ==========================================
+        // RENDER APP
+        // ==========================================
         const root = ReactDOM.createRoot(document.getElementById('root'));
         root.render(<MainApp />);
         
-        console.log('✅ App rendered');
+        console.log('✅ KaliyaX App initialized');
     </script>
 </body>
 </html>
