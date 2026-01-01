@@ -1,6 +1,6 @@
-// FILE: src/AuthPage.jsx - OAuth Only Authentication (NO REFERRAL SYSTEM)
+// FILE: src/AuthPage.jsx - OAuth Only (Updated Admin Link)
 
-const { useState, useEffect } = React;
+const { useState } = React;
 
 function AuthPage() {
     const [error, setError] = useState('');
@@ -40,17 +40,15 @@ function AuthPage() {
             const userDoc = await window.firebaseDB.collection('users').doc(user.uid).get();
 
             if (!userDoc.exists) {
-                // New user - create account with bonuses
                 let welcomeBonus = 100;
 
                 try {
                     const settingsDoc = await window.firebaseDB.collection('settings').doc('system').get();
                     if (settingsDoc.exists) {
-                        const settings = settingsDoc.data();
-                        welcomeBonus = settings.welcomeBonus || 100;
+                        welcomeBonus = settingsDoc.data().welcomeBonus || 100;
                     }
                 } catch (settingsError) {
-                    console.warn('Using default bonus settings');
+                    console.warn('Using default bonus');
                 }
 
                 const apiKey = 'kx_live_' + Math.random().toString(36).substring(2, 15) + 
@@ -59,7 +57,6 @@ function AuthPage() {
                 const userName = user.displayName || user.email.split('@')[0];
                 const profilePicture = user.photoURL || generateProfilePicture(userName);
 
-                // Create new user (NO referral code)
                 await window.firebaseDB.collection('users').doc(user.uid).set({
                     name: userName,
                     email: user.email,
@@ -69,14 +66,13 @@ function AuthPage() {
                     bio: '',
                     apiKeyPaused: false,
                     createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-                    lastClaimDate: null,  // For daily claim tracking
+                    lastClaimDate: null,
                     totalCalls: 0,
                     status: 'active',
                     emailVerified: true,
                     oauthProvider: provider
                 });
 
-                // Add signup transaction
                 await window.firebaseDB.collection('users').doc(user.uid).collection('transactions').add({
                     type: 'signup_bonus',
                     amount: welcomeBonus,
@@ -84,7 +80,6 @@ function AuthPage() {
                     timestamp: firebase.firestore.FieldValue.serverTimestamp()
                 });
 
-                // Welcome notification
                 await window.firebaseDB.collection('users').doc(user.uid).collection('notifications').add({
                     type: 'announcement',
                     title: '🎉 Welcome to KaliyaX API!',
@@ -93,9 +88,8 @@ function AuthPage() {
                     timestamp: firebase.firestore.FieldValue.serverTimestamp()
                 });
 
-                console.log(`✅ New user created: ${user.email} with ${welcomeBonus} coins`);
+                console.log(`✅ New user: ${user.email} with ${welcomeBonus} coins`);
             } else {
-                // Existing user - check if suspended
                 if (userDoc.data().status === 'suspended') {
                     await window.firebaseAuth.signOut();
                     setError('Your account has been suspended. Contact support.');
@@ -109,9 +103,9 @@ function AuthPage() {
             if (err.code === 'auth/popup-closed-by-user') {
                 setError('Sign-in cancelled');
             } else if (err.code === 'auth/account-exists-with-different-credential') {
-                setError('Account already exists with this email using a different login method');
+                setError('Account already exists with different login method');
             } else if (err.code === 'auth/popup-blocked') {
-                setError('Popup blocked. Please allow popups for this site.');
+                setError('Popup blocked. Please allow popups.');
             } else {
                 setError(err.message || 'Login failed. Please try again.');
             }
@@ -131,7 +125,7 @@ function AuthPage() {
                             <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-pink-600 rounded-lg flex items-center justify-center font-bold text-xl">K</div>
                             <span className="text-xl font-bold">KaliyaX API</span>
                         </div>
-                        <a href="admin.html" className="text-slate-400 hover:text-white text-sm transition-colors">
+                        <a href="?admin=true" className="text-slate-400 hover:text-white text-sm transition-colors">
                             Admin Login
                         </a>
                     </div>
@@ -175,7 +169,7 @@ function AuthPage() {
                                             <path fill="#4285F4" d="M12 20a7.48 7.48 0 0 0 5.26-1.93l-2.56-1.99A4.73 4.73 0 0 1 7.5 12H4.53v2.58A7.5 7.5 0 0 0 12 20z"/>
                                             <path fill="#FBBC05" d="M7.5 12a4.5 4.5 0 0 1 0-2.92V6.5H4.53a7.5 7.5 0 0 0 0 7.08z"/>
                                             <path fill="#34A853" d="M12 7.5c1.16 0 2.19.4 3.01 1.18l2.26-2.26A7.5 7.5 0 0 0 4.53 9.08L7.5 11.5A4.48 4.48 0 0 1 12 7.5z"/>
-                        </svg>
+                                        </svg>
                                         <span>Continue with Google</span>
                                     </>
                                 )}
@@ -229,8 +223,8 @@ function AuthPage() {
                     <div className="mt-6 text-center">
                         <div className="bg-blue-500/10 border border-blue-500/30 rounded-lg p-4">
                             <p className="text-blue-400 text-sm">
-                                ✨ Sign up now and get <span className="font-bold">100 coins</span> bonus!<br/>
-                                🎁 Plus claim <span className="font-bold">100 coins daily</span>!
+                                ✨ Sign up and get <span className="font-bold">100 coins</span>!<br/>
+                                🎁 Claim <span className="font-bold">100 coins daily</span>!
                             </p>
                         </div>
                     </div>
